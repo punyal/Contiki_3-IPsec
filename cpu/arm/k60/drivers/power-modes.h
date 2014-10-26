@@ -60,6 +60,14 @@ void power_mode_lls(void);
 /* void power_mode_vlls2(void); */
 /* void power_mode_vlls3(void); */
 
+/** Wait in power save for a condition to become true. */
+#define COND_WAIT(condition) {while (condition) { power_mode_wait(); }}
+#define COND_STOP(condition) {while (condition) { power_mode_stop(); }}
+#define COND_VLPS(condition) {while (condition) { power_mode_vlps(); }}
+#define COND_LLS(condition)  {while (condition) { power_mode_lls(); }}
+
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
