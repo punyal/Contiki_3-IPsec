@@ -21,6 +21,7 @@ CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   devicemap.c \
   udelay.c \
+  spi-config.c \
   init-net.c \
   watchdog.c \
   slip_arch_uart.c \

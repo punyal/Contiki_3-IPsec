@@ -138,6 +138,12 @@ extern "C" {
 #define NUM_UARTS 5
 
 /**
+ * Number of SPI modules in CPU.
+ */
+#define NUM_SPI 3
+
+
+/**
  * UART module used for SLIP communications.
  *
  * This string is passed to open() during slip_init_arch().
@@ -175,6 +181,49 @@ extern "C" {
 
 #define BOARD_DELAY_PIT_IRQn PIT_IRQn_GLUE(BOARD_DELAY_PIT_CHANNEL)
 
+/*
+ * The onboard LIS3DH is connected to SPI0.
+ * SPI0_PCS0 is the active low CS signal.
+ */
+#define LIS3DH_SPI_NUM 0
+#define LIS3DH_CHIP_SELECT_PIN 0
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define LIS3DH_CTAS 1
+
+/*
+ * The onboard AT86RF212/AT86RF230 is connected to SPI0.
+ * SPI0_PCS1 is the active low CS signal.
+ */
+#define AT86RF212_SPI_NUM 0
+#define AT86RF212_CHIP_SELECT_PIN 1
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define AT86RF212_CTAS 0
+
+/*
+ * The onboard M25P16 flash memory is connected to SPI0.
+ * SPI0_PCS2 is the active low CS signal.
+ */
+#define FLASH_SPI_NUM 0
+#define FLASH_CHIP_SELECT_PIN 2
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define FLASH_CTAS 1
+
+/*
+ * The onboard FM25L04 FRAM memory is connected to SPI0.
+ * SPI0_PCS2 is the active low CS signal.
+ */
+#define FRAM_SPI_NUM 0
+#define FRAM_CHIP_SELECT_PIN 3
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define FRAM_CTAS 1
 
 /*
  * 1-wire bus configuration.
