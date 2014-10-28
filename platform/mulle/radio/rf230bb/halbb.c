@@ -476,7 +476,8 @@ HAL_RF230_ISR()
 #if !RF230_CONF_AUTOACK
     rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
 #endif
-  } else if(interrupt_source & HAL_TRX_END_MASK) {
+  }
+  if(interrupt_source & HAL_TRX_END_MASK) {
     INTERRUPTDEBUG(11);
 
     state = hal_subregister_read(SR_TRX_STATUS);
@@ -507,13 +508,17 @@ HAL_RF230_ISR()
     }
 #endif
     }
-  } else if(interrupt_source & HAL_TRX_UR_MASK) {
+  }
+  if(interrupt_source & HAL_TRX_UR_MASK) {
     INTERRUPTDEBUG(13);
-  } else if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
+  }
+  if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
     INTERRUPTDEBUG(14);
-  } else if(interrupt_source & HAL_PLL_LOCK_MASK) {
+  }
+  if(interrupt_source & HAL_PLL_LOCK_MASK) {
     INTERRUPTDEBUG(15);
-  } else if(interrupt_source & HAL_BAT_LOW_MASK) {
+  }
+  if(interrupt_source & HAL_BAT_LOW_MASK) {
     /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
     /*  will continously be asserted while the supply voltage is less than the */
     /*  user-defined voltage threshold. */
@@ -521,8 +526,6 @@ HAL_RF230_ISR()
     trx_isr_mask &= ~HAL_BAT_LOW_MASK;
     hal_register_write(RG_IRQ_MASK, trx_isr_mask);
     INTERRUPTDEBUG(16);
-  } else {
-    INTERRUPTDEBUG(99);
   }
 }
 
