@@ -189,40 +189,19 @@ hal_init(void)
   /*** IO Specific Initialization.****/
 
   /* Enable PORTC clock gate */
-  SIM->SCGC5 |= SIM_SCGC5_PORTD_MASK;
   SIM->SCGC5 |= SIM_SCGC5_PORTE_MASK;
 
   PORTE->PCR[6] |= 0x0100;     /* Sleep */
-  PORTD->PCR[7] |= 0x0100;           /* Vp */
 
   PTE->PDDR |= 0x0040; /* Setup PTE6 (Sleep) as output */
-  PTD->PDDR |= 0x0080; /* Setup PTD7 (Vp) as output */
 
-#ifdef MULLE_IRQ_PATCH
-  SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;
-  PORTC->PCR[1] |= 0x00090100;
-  llwu_enable_wakeup_source(LLWU_WAKEUP_SOURCE_P6_RISING);
-#else
   SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
   PORTB->PCR[9] |= 0x00090100;       /* Set PTB9 (IRQ)    as GPIO with active high interrupt */
-#endif
+
   /* Enable power switch to radio */
   hal_set_pwr_high();
 
-  /*** SPI Specific Initialization.****/
-
-  /* Mux SPI0 on port B */
-  PORTD->PCR[4] |= 0x0200; /* SPI0_PCS1 */
-  PORTD->PCR[2] |= 0x0200; /* SPI0_MOSI */
-  PORTD->PCR[1] |= 0x0200; /* SPI0_SCLK */
-  PORTD->PCR[3] |= 0x0200; /* SPI0_MISO */
-
-  /* Enable clock gate for SPI0 module */
-  SIM->SCGC6 |= SIM_SCGC6_SPI0_MASK;
-
-  /* Configure SPI1 */
-  SPI0->MCR = 0x803F3000;
-  SPI0->CTAR[0] = 0x38002224; /* TODO: Should be able to speed up */
+  /* Platform specific SPI is initialized in spi-config.c */
 
   /*** Enable interrupts from the radio transceiver. ***/
   hal_enable_trx_interrupt();
