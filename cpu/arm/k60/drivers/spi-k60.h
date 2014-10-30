@@ -66,10 +66,13 @@ typedef enum spi_bus {
  * SPI bus configuration structure.
  */
 typedef struct spi_config {
-  uint32_t sck_freq;
-  uint8_t frame_size;
-  uint8_t cpol;
-  uint8_t cpha;
+  uint32_t sck_freq; /**< desired SCK frequency */
+  uint32_t tcsc_freq; /**< reciprocal (i.e. frequency, 1/t) of tCSC, Time between CS line assertion and first SCK flank */
+  uint32_t tasc_freq; /**< reciprocal of tASC, Time between last SCK flank and CS line deassertion */
+  uint32_t tdt_freq; /**< reciprocal of tDT, minimum time between CS line deassertion and CS line re-assertion for the next frame */
+  uint8_t frame_size; /**< Frame size, in bits */
+  uint8_t cpol; /**< CPOL, SCK SPI clock polarity */
+  uint8_t cpha; /**< CPHA, SCK SPI clock phase */
 } spi_config_t;
 
 typedef enum spi_transfer_flag {

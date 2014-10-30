@@ -56,6 +56,65 @@ static lock_t spi_lock[NUM_SPI] = {2, 2, 2}; /* Block access by default until sp
 static volatile uint8_t spi_waiting_flag[NUM_SPI] = {0};
 
 /**
+ * Find the prescaler and scaler settings that will yield a delay timing
+ * as close as possible (but not shorter than) the target delay, given the
+ * module runs at module_clock Hz.
+ *
+ * Hardware properties (delay configuration):
+ * Possible prescalers: 1, 3, 5, 7
+ * Possible scalers: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
+ *
+ * delay = (1/f_BUS) x prescaler x scaler
+ *
+ * Because we want to do this using only integers, the target_freq parameter is
+ * the reciprocal of the delay time.
+ */
+static int find_closest_delay_scalers(const uint32_t module_clock, const uint32_t target_freq, uint8_t *closest_prescaler, uint8_t *closest_scaler) {
+  uint8_t i;
+  uint8_t k;
+  int freq;
+  int prescaler;
+  int scaler;
+  static const uint8_t num_scalers = 16;
+  static const uint8_t num_prescalers = 4;
+
+  int closest_frequency = -1;
+
+  /* Test all combinations until we arrive close to the target clock */
+  for (i = 0; i < num_prescalers; ++i)
+  {
+    for (k = 0; k < num_scalers; ++k)
+    {
+      prescaler = (i * 2) + 1;
+      scaler = (1 << (k + 1)); /* 2^(k+1) */
+      freq = module_clock / (prescaler * scaler);
+      if (freq <= target_freq)
+      {
+        /* Found closest lower frequency at this prescaler setting,
+         * compare to the best result */
+        if (closest_frequency < freq)
+        {
+          closest_frequency = freq;
+          *closest_scaler = k;
+          *closest_prescaler = i;
+        }
+        break;
+      }
+    }
+  }
+  if (closest_frequency < 0)
+  {
+    /* Error, no solution found, this line is never reachable with current
+     * hardware settings unless a _very_ low target clock is requested.
+     * (scaler_max * prescaler_max) = 458752 */
+    return -1;
+  }
+
+  return 0;
+}
+
+
+/**
  * Find the prescaler and scaler settings that will yield a clock frequency
  * as close as possible (but not above) the target frequency, given the module
  * runs at module_clock Hz.
@@ -64,35 +123,33 @@ static volatile uint8_t spi_waiting_flag[NUM_SPI] = {0};
  * Possible prescalers: 2, 3, 5, 7
  * Possible scalers: 2, 4, 6 (sic!), 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768
  *
- * SCK baud rate = (f_SYS/PBR) x [(1+DBR)/BR]
+ * SCK baud rate = (f_BUS/PBR) x [(1+DBR)/BR]
  *
  * where PBR is the prescaler, BR is the scaler, DBR is the Double BaudRate bit.
  *
  * \note We are not using the DBR bit because it may affect the SCK duty cycle.
  */
-static int find_closest_scalers(unsigned int module_clock, unsigned int target_clock, uint32_t *settings)
+static int find_closest_baudrate_scalers(const uint32_t module_clock, const uint32_t target_clock, uint8_t *closest_prescaler, uint8_t *closest_scaler)
 {
-  int i;
-  int k;
+  uint8_t i;
+  uint8_t k;
   int freq;
-  static const int num_scalers = 16;
-  static const int num_prescalers = 4;
-  static const unsigned int scalers[16] = {
+  static const uint8_t num_scalers = 16;
+  static const uint8_t num_prescalers = 4;
+  static const int br_scalers[16] = {
         2,     4,     6,     8,    16,    32,    64,   128,
       256,   512,  1024,  2048,  4096,  8192, 16384, 32768
   };
-  static const unsigned int prescalers[4] = {2, 3, 5, 7};
+  static const int br_prescalers[4] = {2, 3, 5, 7};
 
   int closest_frequency = -1;
-  int closest_scaler = -1;
-  int closest_prescaler = -1;
 
   /* Test all combinations until we arrive close to the target clock */
   for (i = 0; i < num_prescalers; ++i)
   {
     for (k = 0; k < num_scalers; ++k)
     {
-      freq = module_clock / (scalers[k] * prescalers[i]);
+      freq = module_clock / (br_scalers[k] * br_prescalers[i]);
       if (freq <= target_clock)
       {
         /* Found closest lower frequency at this prescaler setting,
@@ -100,8 +157,8 @@ static int find_closest_scalers(unsigned int module_clock, unsigned int target_c
         if (closest_frequency < freq)
         {
           closest_frequency = freq;
-          closest_scaler = k;
-          closest_prescaler = i;
+          *closest_scaler = k;
+          *closest_prescaler = i;
         }
         break;
       }
@@ -114,17 +171,6 @@ static int find_closest_scalers(unsigned int module_clock, unsigned int target_c
      * (scaler_max * prescaler_max) = 229376 => target_min@100MHz = 435 Hz*/
     return -1;
   }
-
-  /* Clear old timing values */
-  (*settings) &= ~(SPI_CTAR_BR_MASK | SPI_CTAR_DT_MASK | SPI_CTAR_ASC_MASK |
-      SPI_CTAR_CSSCK_MASK | SPI_CTAR_PBR_MASK | SPI_CTAR_PDT_MASK |
-      SPI_CTAR_PASC_MASK | SPI_CTAR_PCSSCK_MASK | SPI_CTAR_DBR_MASK);
-
-  /* Set new timings */
-  (*settings) |= SPI_CTAR_BR(closest_scaler) | SPI_CTAR_PBR(closest_prescaler) |
-      SPI_CTAR_ASC(closest_scaler) | SPI_CTAR_PASC(closest_prescaler) |
-      SPI_CTAR_CSSCK(closest_scaler) | SPI_CTAR_PCSSCK(closest_prescaler) |
-      SPI_CTAR_DT(closest_scaler) | SPI_CTAR_PDT(closest_prescaler);
 
   return 0;
 }
@@ -173,11 +219,60 @@ spi_hw_init_master(const spi_bus_t spi_num) {
 
 void spi_set_params(const spi_bus_t spi_num, const uint8_t ctas, const spi_config_t* config) {
   uint32_t ctar = 0;
+  uint8_t br_prescaler = 0xff;
+  uint8_t br_scaler = 0xff;
+  uint8_t prescaler_tmp = 0xff;
+  uint8_t scaler_tmp = 0xff;
 
-  /* All of the SPI modules run on the Bus clock */
-  find_closest_scalers(SystemBusClock, config->sck_freq, &ctar);
+  /* All of the SPI modules run on the Bus clock, see K60 Ref Manual. 3.9.4.2 SPI clocking */
+  /* Find the baud rate divisors */
+  find_closest_baudrate_scalers(SystemBusClock, config->sck_freq, &br_prescaler, &br_scaler);
+  ctar |= SPI_CTAR_PBR(br_prescaler) | SPI_CTAR_BR(br_scaler);
 
-  /* FMSZ equals the frame size + 1 */
+  /* Find the other delay divisors */
+  /* tCSC */
+  if (config->tcsc_freq > 0) {
+    if (find_closest_delay_scalers(SystemBusClock, config->tcsc_freq,
+          &prescaler_tmp, &scaler_tmp) == 0) {
+      ctar |= SPI_CTAR_PCSSCK(prescaler_tmp) | SPI_CTAR_CSSCK(scaler_tmp);
+    } else {
+      /* failed to find a solution */
+      DEBUGGER_BREAK(BREAK_INVALID_PARAM);
+    }
+  } else {
+    /* default: copy BR scaler */
+    ctar |= SPI_CTAR_PCSSCK(br_prescaler) | SPI_CTAR_CSSCK(br_scaler);
+  }
+
+  /* tASC */
+  if (config->tasc_freq > 0) {
+    if (find_closest_delay_scalers(SystemBusClock, config->tasc_freq,
+          &prescaler_tmp, &scaler_tmp) == 0) {
+      ctar |= SPI_CTAR_PASC(prescaler_tmp) | SPI_CTAR_ASC(scaler_tmp);
+    } else {
+      /* failed to find a solution */
+      DEBUGGER_BREAK(BREAK_INVALID_PARAM);
+    }
+  } else {
+    /* default: copy BR scaler */
+    ctar |= SPI_CTAR_PASC(br_prescaler) | SPI_CTAR_ASC(br_scaler);
+  }
+
+  /* tDT */
+  if (config->tdt_freq > 0) {
+    if (find_closest_delay_scalers(SystemBusClock, config->tdt_freq,
+          &prescaler_tmp, &scaler_tmp) == 0) {
+      ctar |= SPI_CTAR_PDT(prescaler_tmp) | SPI_CTAR_DT(scaler_tmp);
+    } else {
+      /* failed to find a solution */
+      DEBUGGER_BREAK(BREAK_INVALID_PARAM);
+    }
+  } else {
+    /* default: copy BR scaler */
+    ctar |= SPI_CTAR_PDT(br_prescaler) | SPI_CTAR_DT(br_scaler);
+  }
+
+  /* FMSZ+1 equals the frame size */
   ctar |= SPI_CTAR_FMSZ(config->frame_size - 1);
 
   if (config->cpol != 0) {

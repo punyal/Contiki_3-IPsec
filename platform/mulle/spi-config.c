@@ -15,9 +15,31 @@
 
 #include "spi-k60.h"
 
+/* For AT86RF212 we need some extra delays for the tASC, tCSC, tDT times. */
+/* CS signal deassertion to assertion delay, t8, tDT > 250 ns => 12 DT divider at 48 MHz bus */
+/* CS signal assertion to SCK delay, t1, tCSC > 180 ns => 8.64 CSC divider at 48 MHz bus */
+/* last SCK rising edge to CS signal deassertion, t9, (tASC + (1/BR)/2) > 250 ns => tASC > 183 ns => 8.8 ASC divider at 48 MHz bus */
+/* LSB last byte to MSB next byte, t5, (tCSC+tASC) > 250 ns => already fulfilled if the above conditions are satisfied. */
+
 static const spi_config_t spi0_conf[NUM_CTAR] = {
-  { .sck_freq = 7500000, .frame_size = 8, .cpol = 0, .cpha = 0},
-  { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
+  {
+    .sck_freq =  7500000, /* 7.5 MHz max bus frequency according to AT86RF212 data sheet. */
+    .frame_size = 8,
+    .cpol = 0,
+    .cpha = 0,
+    .tcsc_freq = 5555555, /* It looks silly, but this is correct. 1/180e-9 */
+    .tasc_freq = 5454545, /* It looks silly, but this is correct. 1/183e-9 */
+    .tdt_freq  = 4000000, /* 1/250e-9 */
+  },
+  {
+    .sck_freq = 10000000,
+    .frame_size = 8,
+    .cpol = 1,
+    .cpha = 1,
+    .tcsc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tasc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tdt_freq  = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+  }
   };
 
 /* SPI1 is only used by expansion boards. */
