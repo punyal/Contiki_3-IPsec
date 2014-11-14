@@ -35,7 +35,7 @@ static struct rtimer rt_clock;
 /* This is based on the MC1322x clock module rtimer implementation. */
 /* the typical clock things like incrementing current_tick and etimer checks */
 /* are performed as a periodically scheduled rtimer */
-void
+static void
 rt_do_clock(struct rtimer *t, void *ptr)
 {
   rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 1,
