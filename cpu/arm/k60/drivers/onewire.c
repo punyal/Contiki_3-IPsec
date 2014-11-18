@@ -57,7 +57,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define ONEWIRE_UART UART4
+#define ONEWIRE_UART_NUM 4
+#define ONEWIRE_UART UART[ONEWIRE_UART_NUM]
 #define ONEWIRE_ISR_FUNC _isr_uart4_status
 #define ONEWIRE_IRQn UART4_RX_TX_IRQn
 #define ONEWIRE_UART_MODULE_FREQUENCY F_BUS
@@ -239,7 +240,7 @@ ow_init(void)
   ONEWIRE_TXPIN_PCR = PORT_PCR_MUX(3) | PORT_PCR_ODE_MASK;
 
   /* Enable clock gate on UART module */
-  SIM->SCGC1 |= SIM_SCGC1_UART4_MASK;
+  uart_module_enable(ONEWIRE_UART_NUM);
 
   /* Make sure MSBF bit is not set */
   ONEWIRE_UART->S2 = 0;
