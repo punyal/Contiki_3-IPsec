@@ -1,14 +1,18 @@
 /**
  * \file
- *         Clock module library port for MK60DZ10.
+ *         Clock module implementation using rtimers.
  * \author
- *         Tony Persson <tony.persson@rubico.com>
+ *         Joakim Gebart <joakim.gebart@eistec.se>
  */
 
 #include "contiki.h"
 #include "contiki-conf.h"
 #include "sys/clock.h"
 #include "sys/etimer.h"
+
+#include "sys/etimer.h"
+#include "sys/rtimer.h"
+
 #include "K60.h"
 #include "power-modes.h"
 
@@ -20,9 +24,35 @@
 #define PRINTF(...)
 #endif
 
+#define MAX_TICKS (~((clock_time_t)0) / 2)
+
 static volatile clock_time_t current_tick;
 static volatile unsigned long current_seconds = 0;
 static volatile unsigned long second_countdown = CLOCK_SECOND;
+
+static struct rtimer rt_clock;
+
+/* This is based on the MC1322x clock module rtimer implementation. */
+/* the typical clock things like incrementing current_tick and etimer checks */
+/* are performed as a periodically scheduled rtimer */
+void
+rt_do_clock(struct rtimer *t, void *ptr)
+{
+  rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 1,
+             (rtimer_callback_t)rt_do_clock, ptr);
+
+  current_tick++;
+
+  if(--second_countdown == 0) {
+    current_seconds++;
+    second_countdown = CLOCK_SECOND;
+  }
+
+  if(etimer_pending() &&
+     (etimer_next_expiration_time() - current_tick - 1) > MAX_TICKS) {
+    etimer_request_poll();
+  }
+}
 
 /*
  * Get the system time.
@@ -43,7 +73,7 @@ clock_seconds(void)
 }
 
 /*
- * Get the system time in seconds.
+ * Set the system time in seconds.
  */
 void
 clock_set_seconds(unsigned long sec)
@@ -83,50 +113,10 @@ clock_wait(clock_time_t delay)
 
 /*
  * Initialize the clock module.
- *
- * Generates interrupt from external 32kHz crystal.
  */
-/* TODO(Henrik) move to platform, init may differ between platforms. */
+/* rtimer MUST have been already initialized */
 void
 clock_init(void)
 {
-  /* Setup Low Power Timer (LPT) */
-
-  /* Enable LPT clock gate */
-  BITBAND_REG(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT) = 1;
-
-  /* Disable timer to change settings. */
-  /* Logic is reset when the timer is disabled, TCF flag is also cleared on disable. */
-  LPTMR0->CSR = 0x00;
-  /* Underflow every x+1 clocks */
-  LPTMR0->CMR = (LPTMR_CMR_COMPARE((32768 / CLOCK_SECOND) - 1));
-  /* Prescaler bypass, LPTMR is clocked directly by ERCLK32K. */
-  LPTMR0->PSR = (LPTMR_PSR_PBYP_MASK | LPTMR_PSR_PCS(0b10));
-  /* Enable timer, enable interrupts. */
-  LPTMR0->CSR |= (LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK);
-
-  /* Enable LPT interrupt */
-  NVIC_EnableIRQ(LPTimer_IRQn);
-}
-
-/*
- * LPTMR ISR
- */
-void
-_isr_lpt(void)
-{
-  /* Clear timer compare flag by writing a 1 to it */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
-  PRINTF("LPT: Interrupt\n");
-
-  /* Contiki event polling */
-  current_tick++;
-
-  if(--second_countdown == 0) {
-    current_seconds++;
-    second_countdown = CLOCK_SECOND;
-  }
-  if(etimer_pending()) {
-    etimer_request_poll();
-  }
+  rtimer_set(&rt_clock, RTIMER_NOW() + RTIMER_SECOND/CLOCK_SECOND, 1, (rtimer_callback_t)rt_do_clock, NULL);
 }

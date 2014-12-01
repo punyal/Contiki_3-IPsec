@@ -49,26 +49,7 @@
 extern "C" {
 #endif
 
-/* Use first timer unless told otherwise. */
-#ifdef RTIMER_ARCH_CONF_PIT_DEV
-#define RTIMER_ARCH_PIT_DEV RTIMER_ARCH_CONF_PIT_DEV
-#else
-#define RTIMER_ARCH_PIT_DEV PIT
-#endif
-
-#ifdef RTIMER_ARCH_CONF_PIT_CHANNEL
-#define RTIMER_ARCH_PIT_CHANNEL RTIMER_ARCH_CONF_PIT_CHANNEL
-#else
-#define RTIMER_ARCH_PIT_CHANNEL 0
-#endif
-
-#ifdef RTIMER_ARCH_CONF_PIT_IRQn
-#define RTIMER_ARCH_PIT_IRQn RTIMER_ARCH_CONF_PIT_IRQn
-#else
-#define RTIMER_ARCH_PIT_IRQn PIT0_IRQn
-#endif
-
-#define RTIMER_ARCH_SECOND (F_BUS)
+#define RTIMER_ARCH_SECOND (32768)
 
 void rtimer_arch_set(rtimer_clock_t t);
 

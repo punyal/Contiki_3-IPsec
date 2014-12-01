@@ -111,6 +111,8 @@ main(void)
   /*
    * Initialize Contiki and our processes.
    */
+  rtimer_init();
+
   process_init();
   process_start(&etimer_process, NULL);
 
@@ -120,7 +122,6 @@ main(void)
   init_cfs();
   init_net();
   voltage_init();
-  rtimer_init();
 
   autostart_start(autostart_processes);
 
