@@ -55,11 +55,7 @@
 #include <stdbool.h>
 #include "radio.h"
 #include "hal.h"
-#if defined(__AVR_ATmega128RFA1__)
-#include "atmega128rfa1_registermap.h"
-#else
 #include "at86rf230_registermap.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,15 +68,11 @@ extern "C" {
 #define RF230B                                  (3)
 #define SUPPORTED_MANUFACTURER_ID               (31)
 
-#if defined(__AVR_ATmega128RFA1__)
-#define RF230_SUPPORTED_INTERRUPT_MASK          (0xFF)
-#else
 /* RF230 does not support RX_START interrupts in extended mode, but it seems harmless to always enable it. */
 /* In non-extended mode this allows RX_START to sample the RF rssi at the end of the preamble */
 /* #define RF230_SUPPORTED_INTERRUPT_MASK        ( 0x08 )  //enable trx end only */
 /* #define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0F ) //disable bat low, trx underrun */
 #define RF230_SUPPORTED_INTERRUPT_MASK          (0x0C)    /* disable bat low, trx underrun, pll lock/unlock */
-#endif
 
 #define RF230_MIN_CHANNEL                       (11)
 #define RF230_MAX_CHANNEL                       (26)
