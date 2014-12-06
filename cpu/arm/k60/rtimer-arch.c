@@ -111,7 +111,7 @@ rtimer_arch_schedule(rtimer_clock_t t) {
     t = now + RTIMER_PERIOD;
   }
   /* The reference manual states that the CMR register should not be written
-   * while the timer is enabled unless the TCF (interrupt flag) is set.
+   * while the timer is enabled unless the TCF (interrupt flag) is set. */
   /* It seems like modifying the CMR variable without stopping (against the
    * reference manual's recommendations) cause sporadic failures of the
    * interrupt to trigger. It seems to happen at random. */
