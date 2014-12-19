@@ -59,9 +59,23 @@ typedef enum {
   DS18B20_READ_SCRATCHPAD = 0xBE
 } ds18b20_cmd_t;
 
+typedef struct __attribute__((__packed__)) ds18b20_scratchpad {
+  uint8_t temp_lsb;
+  uint8_t temp_msb;
+  uint8_t user1;
+  uint8_t user2;
+  uint8_t configuration;
+  uint8_t reserved_ff;
+  uint8_t count_remain;
+  uint8_t count_per_c;
+  uint8_t crc;
+} ds18b20_scratchpad_t;
+
 void ds18b20_init(void);
 void ds18b20_convert_temperature(const ow_rom_code_t id);
-uint8_t ds18b20_read_scratchpad(const ow_rom_code_t id, uint8_t *dest);
+uint8_t ds18b20_read_scratchpad(const ow_rom_code_t id, ds18b20_scratchpad_t *dest);
+float ds18b20_parse_scratchpad_float(const ds18b20_scratchpad_t *scratch);
+float ds18s20_parse_scratchpad_float(const ds18b20_scratchpad_t *scratch);
 
 #ifdef __cplusplus
 } /* extern "C" */
