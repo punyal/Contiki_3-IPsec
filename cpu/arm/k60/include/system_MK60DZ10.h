@@ -86,6 +86,10 @@ extern uint32_t SystemFlexBusClock;
  */
 extern uint32_t SystemFlashClock;
 
+/**
+ * \brief PIT module clock_delay_usec scale factor
+ */
+extern uint32_t PIT_ticks_per_usec;
 
 /**
  * \brief Setup the microcontroller system.
