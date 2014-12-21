@@ -56,8 +56,17 @@
 #include "uart.h"
 #include "port.h"
 #include "config-clocks.h"
-#include <stdio.h>
 #include <stdint.h>
+
+#define DEBUG 0
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) PRINTF(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
+
+
 
 /* Convenience macro, ONEWIRE_UART_NUM is defined by the platform. */
 #define ONEWIRE_UART UART[ONEWIRE_UART_NUM]
@@ -426,7 +435,7 @@ ow_read_rom(void)
   uint8_t i;
   ow_rom_code_t rom_code;
   static const ow_rom_cmd_t cmd = ONEWIRE_CMD_READ_ROM;
-  printf("READ ROM: ");
+  PRINTF("READ ROM: ");
   ow_reset();
   ow_write_bytes((const uint8_t *)(&cmd), 1);
   ow_read_bytes(rom, ONEWIRE_ROM_CODE_LENGTH);
@@ -445,10 +454,10 @@ ow_read_rom(void)
 
   for(i = 0; i < sizeof(rom) / 2; ++i) {
     buf = (rom[2 * i] << 8) | (rom[2 * i + 1]);
-    printf("%x", buf);
+    PRINTF("%x", buf);
   }
-  printf("\n");
-  printf("CRC: 0x%x\n", ow_compute_crc(rom, ONEWIRE_ROM_CODE_LENGTH));
+  PRINTF("\n");
+  PRINTF("CRC: 0x%x\n", ow_compute_crc(rom, ONEWIRE_ROM_CODE_LENGTH));
   return rom_code;
 }
 /**
@@ -460,7 +469,7 @@ void
 ow_skip_rom(void)
 {
   static const ow_rom_cmd_t cmd = ONEWIRE_CMD_SKIP_ROM;
-  printf("SKIP ROM\n");
+  PRINTF("SKIP ROM\n");
   ow_reset();
   ow_write_bytes((const uint8_t *)(&cmd), 1);
 }
@@ -477,7 +486,7 @@ ow_match_rom(const ow_rom_code_t id)
 {
   static ow_rom_code_t rom_code;
   static const ow_rom_cmd_t cmd = ONEWIRE_CMD_MATCH_ROM;
-  printf("MATCH ROM\n");
+  PRINTF("MATCH ROM\n");
   ow_reset();
   ow_write_bytes((const uint8_t *)(&cmd), 1);
   /* Copy from stack to a static variable to avoid messing up the buffer when
