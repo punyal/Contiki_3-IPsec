@@ -41,8 +41,15 @@
 
 #include "onewire.h"
 #include "ds18b20.h"
-#include "stdio.h"
 #include "stdbool.h"
+
+#define DEBUG 0
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) PRINTF(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
 
 /**
  * Initialize the DS18B20 driver.
@@ -67,11 +74,6 @@ ds18b20_convert_temperature(const ow_rom_code_t id)
 
   ow_skip_or_match_rom(id);
   ow_write_bytes((const uint8_t *)&cmd, 1);
-  /* Keep reading to see status of the conversion, the response will be 1 for as
-   * long as the conversion is in progress, then change to 0. */
-  /*uint8_t status = 0;*/
-  /*ow_read_bytes(&status, 1);*/
-  /*printf("status: %x\n");*/
 }
 /**
  * Read the scratchpad of a DS18B20 sensor.
@@ -91,17 +93,17 @@ ds18b20_read_scratchpad(const ow_rom_code_t id, ds18b20_scratchpad_t *dest)
   ow_skip_or_match_rom(id);
   ow_write_bytes((const uint8_t *)&cmd, 1);
   ow_read_bytes((uint8_t *)dest, DS18B20_SCRATCHPAD_SIZE);
-  printf("Scratchpad: ");
+  PRINTF("Scratchpad: ");
   for(i = 0; i < DS18B20_SCRATCHPAD_SIZE; ++i) {
-    printf("%02x", ((uint8_t *)dest)[i]);
+    PRINTF("%02x", ((uint8_t *)dest)[i]);
   }
-  printf("\n");
-  printf("CRC: %x (should be %x)\n", dest->crc, ow_compute_crc((uint8_t *)dest, DS18B20_SCRATCHPAD_SIZE - 1));
+  PRINTF("\n");
+  PRINTF("CRC: %x (should be %x)\n", dest->crc, ow_compute_crc((uint8_t *)dest, DS18B20_SCRATCHPAD_SIZE - 1));
   buf = (dest->temp_msb << 8) | dest->temp_lsb;
   /* ds18b20: */
-  //~ printf("Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f) * 625);
+  //~ PRINTF("Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f) * 625);
   /* ds1820, ds18s20: */
-  printf("Temp (celsius): %d.%d\n", (buf >> 1), (buf & 0x01) * 5);
+  PRINTF("Temp (celsius): %d.%d\n", (buf >> 1), (buf & 0x01) * 5);
   return ow_compute_crc((uint8_t *)dest, DS18B20_SCRATCHPAD_SIZE);
 }
 
@@ -120,7 +122,7 @@ float ds18b20_parse_scratchpad_float(const ds18b20_scratchpad_t *scratch)
   int16_t buf;
   float ret = 0.0;
   buf = (scratch->temp_msb << 8) | scratch->temp_lsb;
-  printf("Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f)*625);
+  PRINTF("Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f)*625);
 
   /* float transformation */
   ret = buf / 16.0f;
@@ -154,7 +156,7 @@ float ds18s20_parse_scratchpad_float(const ds18b20_scratchpad_t *scratch)
   ret /= scratch->count_per_c;
   ret += buf / 4;
 
-  printf("DS1820 Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f) * 625);
+  PRINTF("DS1820 Temp (celsius): %d.%d\n", (buf >> 4), (buf & 0x0f) * 625);
 
   /* float transformation */
   ret = buf / 16.0f;
