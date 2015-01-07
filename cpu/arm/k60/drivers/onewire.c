@@ -52,23 +52,15 @@
 #include "onewire-crc-table.h"
 #include "interrupt.h"
 #include "K60.h"
+#include "config-board.h"
 #include "uart.h"
+#include "port.h"
 #include "config-clocks.h"
 #include <stdio.h>
 #include <stdint.h>
 
-#define ONEWIRE_UART_NUM 4
+/* Convenience macro, ONEWIRE_UART_NUM is defined by the platform. */
 #define ONEWIRE_UART UART[ONEWIRE_UART_NUM]
-#define ONEWIRE_ISR_FUNC _isr_uart4_status
-#define ONEWIRE_IRQn UART4_RX_TX_IRQn
-#define ONEWIRE_UART_MODULE_FREQUENCY F_BUS
-#define ONEWIRE_RXPIN_PCR PORTE->PCR[25]
-#define ONEWIRE_TXPIN_PCR PORTE->PCR[24]
-
-/* TX pin port clock gate mask */
-#define ONEWIRE_TXPIN_PORT_CG SIM_SCGC5_PORTE_MASK
-/* RX pin port clock gate mask */
-#define ONEWIRE_RXPIN_PORT_CG SIM_SCGC5_PORTE_MASK
 
 /* Data bytes used in the UART to generate the correct 1-wire waveforms. */
 #define ONEWIRE_D_RESET (0xF0)
@@ -230,14 +222,16 @@ ow_init(void)
   ow_read_bits = 0;
 
   /* Enable clock gate on I/O pins */
-  SIM->SCGC5 |= ONEWIRE_TXPIN_PORT_CG | ONEWIRE_RXPIN_PORT_CG;
+  port_module_enable(ONEWIRE_TX_PORT);
+  port_module_enable(ONEWIRE_RX_PORT);
+
   /* Choose UART in pin mux */
-  ONEWIRE_RXPIN_PCR = PORT_PCR_MUX(3);
+  ONEWIRE_RX_PORT->PCR[ONEWIRE_RX_PIN] = PORT_PCR_MUX(ONEWIRE_RX_PCR_FUNC);
 
   /* Use open drain on UART TX pin */
   /* The built in pull-up in the I/O pin is too weak (20k-50k Ohm) on TX pin,
    * you should add an external pull up of circa 5k Ohm. */
-  ONEWIRE_TXPIN_PCR = PORT_PCR_MUX(3) | PORT_PCR_ODE_MASK;
+  ONEWIRE_TX_PORT->PCR[ONEWIRE_TX_PIN] = PORT_PCR_MUX(ONEWIRE_TX_PCR_FUNC) | PORT_PCR_ODE_MASK;
 
   /* Enable clock gate on UART module */
   uart_module_enable(ONEWIRE_UART_NUM);

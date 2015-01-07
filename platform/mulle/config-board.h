@@ -156,6 +156,55 @@ extern "C" {
 /* enable 12pF load capacitance, might need adjusting.. */
 #define BOARD_RTC_LOAD_CAP_BITS (RTC_CR_SC8P_MASK | RTC_CR_SC4P_MASK)
 
+
+/*
+ * 1-wire bus configuration.
+ *
+ * The hardware needs some external components:
+ *  - 5k-ish pull-up resistor between 3.3V (or VSEC) and the RX pin.
+ *  - Jumper between RX and TX pin.
+ *
+ * There is a way in software to loop-back connect RX and TX pins inside the CPU
+ * package, but using this functionality disables the external electrical
+ * signal, which makes it impossible to use this for any communications other
+ * than software testing. Therefore we use an external jumper between the RX and
+ * TX lines instead.
+ * The TX line will be configured as an open-drain output in order to let the
+ * 1-wire slave to drive the RX pin low when communicating back.
+ */
+
+/**
+ * UART module number assigned to 1-wire bus driver.
+ *
+ * Only used if ow_init() is called by the application, this is not included in
+ * Mulle contiki-main default startup procedure.
+ */
+#define ONEWIRE_UART_NUM 0
+
+/**
+ * \brief Clock frequency of the chosen UART module.
+ *
+ * \todo handle 1-wire clocking with runtime configured core clock frequency.
+ */
+#define ONEWIRE_UART_MODULE_FREQUENCY F_BUS
+
+/** 1-wire ISR function name. This should be the IRQ handler for the UARTx STATUS IRQ. */
+#define ONEWIRE_ISR_FUNC _isr_uart0_status
+/** 1-wire IRQ number. This should be the IRQn for the UARTx STATUS IRQ, see MK60D10.h */
+#define ONEWIRE_IRQn UART0_RX_TX_IRQn
+/** 1-wire TX pin port module. */
+#define ONEWIRE_TX_PORT PORTA
+/** 1-wire TX pin number. */
+#define ONEWIRE_TX_PIN 14
+/** Function index number of UART TX function for the given pin. */
+#define ONEWIRE_TX_PCR_FUNC 3
+/** 1-wire RX pin port module*/
+#define ONEWIRE_RX_PORT PORTA
+/** 1-wire TX pin number. */
+#define ONEWIRE_RX_PIN 15
+/** Function index number of UART RX function for the given pin. */
+#define ONEWIRE_RX_PCR_FUNC 3
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
