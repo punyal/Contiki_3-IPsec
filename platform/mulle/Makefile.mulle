@@ -54,8 +54,19 @@ ifdef UIP_CONF_IPV6
 CFLAGS += -DWITH_UIP6=1
 endif
 
+# Backwards compatibility with older environment settings (.profile, .bashrc etc.)
+# MULLE_SERIAL was called MULLE_BOARD_SERIAL_NUMBER previously.
 ifdef MULLE_BOARD_SERIAL_NUMBER
-CFLAGS += -DMULLE_BOARD_SERIAL_NUMBER=$(MULLE_BOARD_SERIAL_NUMBER)
+  ifeq ($(MULLE_SERIAL),)
+    MULLE_SERIAL=$(MULLE_BOARD_SERIAL_NUMBER)
+  endif
+endif
+
+# MULLE_SERIAL is used to select which specific Mulle board we are compiling for.
+# This was called MULLE_BOARD_SERIAL_NUMBER previously, renamed because
+# MULLE_BOARD_SERIAL_NUMBER is too long to type.
+ifdef MULLE_SERIAL
+  CFLAGS += -DMULLE_SERIAL=$(MULLE_SERIAL)
 endif
 
 include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
