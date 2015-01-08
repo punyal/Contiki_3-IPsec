@@ -30,46 +30,12 @@
  *
  */
 
+#ifndef SPI_CONFIG_H_
+#define SPI_CONFIG_H_
+
 /**
- * \file
- *         Power mode switching functions for the K60 CPU.
- * \author
- *         Joakim Gebart <joakim.gebart@eistec.se>
+ * Initialize the on board SPI bus with configuration settings from spi-config.c.
  */
+void board_spi_init(void);
 
-#ifndef CPU_ARM_K60_POWER_MODES_H_
-#define CPU_ARM_K60_POWER_MODES_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** \todo Handle VLLSx modes */
-/** \todo Handle VLPR, VLPW modes */
-
-void power_modes_init(void);
-
-/* void power_mode_run(void); */
-void power_mode_wait(void);
-void power_mode_stop(void);
-/* void power_mode_vlpr(void); */
-/* void power_mode_vlpw(void); */
-void power_mode_vlps(void);
-void power_mode_lls(void);
-/* void power_mode_vlls1(void); */
-/* void power_mode_vlls2(void); */
-/* void power_mode_vlls3(void); */
-
-/** Wait in power save for a condition to become true. */
-#define COND_WAIT(condition) {while (condition) { power_mode_wait(); }}
-#define COND_STOP(condition) {while (condition) { power_mode_stop(); }}
-#define COND_VLPS(condition) {while (condition) { power_mode_vlps(); }}
-#define COND_LLS(condition)  {while (condition) { power_mode_lls(); }}
-
-
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
-#endif /* CPU_ARM_K60_POWER_MODES_H_ */
+#endif /* SPI_CONFIG_H_ */

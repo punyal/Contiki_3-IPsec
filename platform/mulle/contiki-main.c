@@ -13,6 +13,7 @@
 #include "core-clocks.h"
 #include "uart.h"
 #include "udelay.h"
+#include "clock.h"
 #include "llwu.h"
 #include "init-net.h"
 #include "power-control.h"
@@ -22,6 +23,8 @@
 #include "devicemap.h"
 #include "random.h"
 #include "rtc.h"
+#include "spi-config.h"
+#include "spi-k60.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -98,9 +101,12 @@ main(void)
   power_control_vperiph_set(1);
 
   udelay_init();
-  udelay(0xFFFF);
-  udelay(0xFFFF);
-  random_init((unsigned short)SIM->UIDL);
+
+  /* Initialize SPI bus driver */
+  board_spi_init();
+  /** \todo make SPI0 on-demand clocked. */
+  spi_start(0);
+
 #ifndef WITH_SLIP
   PRINTF("Booted\n");
   PRINTF("CPUID: %08x\n", (unsigned int)SCB->CPUID);
@@ -111,14 +117,15 @@ main(void)
   /*
    * Initialize Contiki and our processes.
    */
+  random_init((unsigned short)SIM->UIDL);
   rtimer_init();
+  clock_init();
 
   process_init();
   process_start(&etimer_process, NULL);
 
   ctimer_init();
 
-  clock_init();
   init_cfs();
   init_net();
   voltage_init();

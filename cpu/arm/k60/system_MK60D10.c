@@ -50,6 +50,7 @@ uint32_t SystemSysClock = DEFAULT_SYSTEM_CLOCK; /* Current system clock frequenc
 uint32_t SystemBusClock = DEFAULT_SYSTEM_CLOCK; /* Current bus clock frequency */
 uint32_t SystemFlexBusClock = DEFAULT_SYSTEM_CLOCK; /* Current FlexBus clock frequency */
 uint32_t SystemFlashClock = DEFAULT_SYSTEM_CLOCK; /* Current flash clock frequency */
+uint32_t PIT_ticks_per_usec = DEFAULT_SYSTEM_CLOCK / 1000000;
 
 /* Initialize RTC oscillator as early as possible since we are using it as a
  * base clock for the FLL.
@@ -279,4 +280,13 @@ void SystemCoreClockUpdate(void) {
   SystemBusClock = (MCGOUTClock / (1u + ((SIM->CLKDIV1 & SIM_CLKDIV1_OUTDIV2_MASK) >> SIM_CLKDIV1_OUTDIV2_SHIFT)));
   SystemFlexBusClock = (MCGOUTClock / (1u + ((SIM->CLKDIV1 & SIM_CLKDIV1_OUTDIV3_MASK) >> SIM_CLKDIV1_OUTDIV3_SHIFT)));
   SystemFlashClock = (MCGOUTClock / (1u + ((SIM->CLKDIV1 & SIM_CLKDIV1_OUTDIV4_MASK) >> SIM_CLKDIV1_OUTDIV4_SHIFT)));
+
+  /* Module helper variables */
+  if (SystemBusClock >= 1000000) {
+    /* PIT module clock_delay_usec scale factor */
+    PIT_ticks_per_usec = (SystemBusClock + 500000) / 1000000; /* Rounded to nearest integer */
+  } else {
+    /* less than 1 MHz clock frequency on the PIT module, round up. */
+    PIT_ticks_per_usec = 1;
+  }
 }

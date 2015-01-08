@@ -36,6 +36,7 @@ CONTIKI_TARGET_SOURCEFILES += \
   port.c \
   uart.c \
   rtc.c \
+  spi.c \
   rtimer-arch.c \
   dbg-uart.c \
   clock.c \

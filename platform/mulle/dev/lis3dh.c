@@ -255,14 +255,14 @@ lis3dh_set_scale(const lis3dh_scale_t scale)
 /**
  * Initialize a LIS3DH accelerometer.
  *
+ * SPI is assumed to be initialized beforehand.
+ *
  * \todo Signal errors when initializing the LIS3DH hardware.
  */
 void
 lis3dh_init()
 {
   uint8_t databyte;
-
-  lis3dh_arch_init();
 
   databyte = lis3dh_read_byte(WHO_AM_I);
   if(databyte != LIS3DH_WHO_AM_I_RESPONSE) {
