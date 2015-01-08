@@ -156,10 +156,6 @@ CPU_STARTOBJ=${addprefix $(OBJECTDIR)/,$(CPU_STARTC:.c=.o)}
 
 PROJECT_OBJECTFILES += ${addprefix $(OBJECTDIR)/,$(CONTIKI_TARGET_MAIN:.c=.o)}
 
-ifeq ($(PORT),)
-  PORT=/dev/ttyUSB0
-endif
-
 ### Compilation rules
 all:
 

@@ -105,7 +105,19 @@ OOCD_BOARD_FLAGS ?= -f '$(PLATFORM_DIR)/tools/openocd/mulle-programmer-$(PROGRAM
 # Add serial matching command
 ifneq ($(PROGRAMMER_SERIAL),)
   OOCD_BOARD_FLAGS += -c 'ftdi_serial $(PROGRAMMER_SERIAL)'
+
+  ifeq ($(PORT),)
+    # try to find tty name by serial number, only works on Linux currently.
+    ifeq ($(HOST_OS),Linux)
+      PORT :=$(shell $(PLATFORM_DIR)/tools/find-tty.sh $(PROGRAMMER_SERIAL))
+    endif
+  endif
 endif
+
+ifeq ($(PORT),)
+  PORT=/dev/ttyUSB0
+endif
+
 
 ifeq ($(FILENAME),)
 FILENAME = $(CONTIKI_PROJECT).$(TARGET)
