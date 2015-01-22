@@ -21,7 +21,7 @@
 /*================================ Defines ==================================*/
 
 /**
- * \brief Used to converet a timestamp read from the device using 
+ * \brief Used to converet a timestamp read from the device using
  * \ref dw_get_rx_timestamp or \ref dw_get_tx_timestamp to real seconds.
  */
 #define DW_MS_TO_DEVICE_TIME_SCALE 62.6566416e6f
@@ -29,12 +29,12 @@
 /*===========================================================================*/
 /*=========================== Private Functions =============================*/
 
-void dw_enable_interrupt( uint32_t mask );
+static void dw_enable_interrupt( uint32_t mask );
 
-void dw_trxoff();
+static void dw_trxoff();
 
-void dw_init_rx();
-void dw_init_tx();
+static void dw_init_rx();
+static void dw_init_tx();
 
 /*===========================================================================*/
 /*============================= Configuration ===============================*/
@@ -82,7 +82,7 @@ void dw_init()
 
 	// New init code
 	// TODO: Make default configuration optional
-	dw1000.conf.prf             = DW_PRF_16_MHZ; 
+	dw1000.conf.prf             = DW_PRF_16_MHZ;
 	dw1000.conf.channel         = DW_CHANNEL_5;
 	dw1000.conf.preamble_length = DW_PREAMBLE_LENGTH_128;
 	dw1000.conf.preamble_code   = DW_PREAMBLE_CODE_3;
@@ -99,7 +99,7 @@ void dw_init()
 
 /**
  * \brief Uploads and applies a given configuration to the dw1000.
- * 
+ *
  * \param[in] dw_conf 	Configuration to be applied.
  */
 void dw_conf(dw1000_base_conf_t * dw_conf)
@@ -279,7 +279,7 @@ void dw_conf(dw1000_base_conf_t * dw_conf)
 	}
 
 	// === Configure SFD
-	// TODO: Implement user specified 
+	// TODO: Implement user specified
 	chan_ctrl_val &= ~DW_DWSFD_MASK;
 
 	if (dw_conf->sfd_type == DW_SFD_USER_SPECIFIED)
@@ -373,7 +373,7 @@ void dw_conf_rx( dw1000_rx_conf_t * rx_conf )
 	if ( rx_conf->is_delayed )
 	{
 		dw_set_dx_timestamp( rx_conf->dx_timestamp );
-		
+
 		uint32_t sys_ctrl_val;
 		sys_ctrl_val  = dw_read_reg_32( DW_REG_SYS_CTRL, DW_LEN_SYS_CTRL );
 		sys_ctrl_val |= DW_RXDLYE_MASK;
@@ -383,7 +383,7 @@ void dw_conf_rx( dw1000_rx_conf_t * rx_conf )
 
 /**
  * \brief Configures the DW1000 to be ready to transmit message. See \ref dw1000_tx_conf_t.
- * 
+ *
  * \param[in] tx_conf 	Configuration specification.
  */
 void dw_conf_tx( dw1000_tx_conf_t * tx_conf )
@@ -401,7 +401,7 @@ void dw_conf_tx( dw1000_tx_conf_t * tx_conf )
 	if ( tx_conf->is_delayed )
 	{
 		dw_set_dx_timestamp( tx_conf->dx_timestamp );
-		
+
 		uint32_t ctrl_reg_val;
 		ctrl_reg_val  = dw_read_reg_32( DW_REG_SYS_CTRL, DW_LEN_SYS_CTRL );
 		ctrl_reg_val |= DW_TXDLYS_MASK;
@@ -410,7 +410,7 @@ void dw_conf_tx( dw1000_tx_conf_t * tx_conf )
 }
 
 /**
- * \brief Reads the current configuration from device and prints it using 
+ * \brief Reads the current configuration from device and prints it using
  *  printf. The current configuration is all registers that can be modified by
  *  \ref dw_conf, \ref dw_conf_rx and \ref dw_conf_tx.
  */
@@ -453,7 +453,7 @@ dw_conf_print()
 
 	float temperature = dw_get_temperature(DW_ADC_SRC_LATEST);
 	float voltage     = dw_get_voltage(DW_ADC_SRC_LATEST);
-	
+
 	printf("============================\n");
 	printf("DW1000 Current Configuration\n");
 	printf("============================\n");
@@ -515,7 +515,7 @@ dw_read_reg( uint32_t regAddr, uint32_t regLen, uint8_t * pData )
 	// Initiate read
 	uint8_t instruction = 0x00 | (regAddr & 0x3F);
 	dw_spi_transfer_byte(instruction, DW_SPI_TRANSFER_CONT);
-	
+
 	// Read data
 	dw_spi_read_n_bytes( regLen, pData, DW_SPI_TRANSFER_DONE );
 }
@@ -561,7 +561,7 @@ dw_read_reg_64( uint32_t regAddr, uint32_t regLen )
  * \param[in] subreg_addr	Subregister address as specified in the manual and
  *                           by the DW_SUBREG_* defines.
  * \param[in] subreg_len	Nunmber of bytes to read. Should not be longer than
- * 							 the length specified in the manual or the 
+ * 							 the length specified in the manual or the
  * 							 DW_SUBLEN_* defines.
  * \param[out] p_data 		Data read from the device.
  */
@@ -576,13 +576,13 @@ dw_read_subreg( uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len, ui
 	instruction = (instruction << 8) | ((subreg_addr & 0x7F80) >> 7);
 
 	// Write instruction
-	// Data is written as --001122 
+	// Data is written as --001122
 	uint8_t * pInstr = (uint8_t *)(&instruction) + 2;
 	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
 	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
 	if (is_three_octet)
 	{
-		dw_spi_transfer_byte(*pInstr, DW_SPI_TRANSFER_CONT);	
+		dw_spi_transfer_byte(*pInstr, DW_SPI_TRANSFER_CONT);
 	}
 
 	// Read data
@@ -596,8 +596,8 @@ dw_read_subreg( uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len, ui
  * \param[in] subreg_addr	Subregister address as specified in the manual and
  *                           by the DW_SUBREG_* defines.
  * \param[in] subreg_len	Nunmber of bytes to read. Should not be longer than
- * 							 the length specified in the manual or the 
- * 							 DW_SUBLEN_* defines. Neither should it be larger 
+ * 							 the length specified in the manual or the
+ * 							 DW_SUBLEN_* defines. Neither should it be larger
  * 							 than 4 bytes.
  * \return A 32-bit unsigned integer read from a register of the dw1000.
  */
@@ -616,8 +616,8 @@ dw_read_subreg_32( uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len 
  * \param[in] subreg_addr	Subregister address as specified in the manual and
  *                           by the DW_SUBREG_* defines.
  * \param[in] subreg_len	Nunmber of bytes to read. Should not be longer than
- * 							 the length specified in the manual or the 
- * 							 DW_SUBLEN_* defines. Neither should it be larger 
+ * 							 the length specified in the manual or the
+ * 							 DW_SUBLEN_* defines. Neither should it be larger
  * 							 than 8 bytes.
  * \return A 64-bit unsigned integer read from a register of the dw1000.
  */
@@ -639,14 +639,14 @@ dw_read_subreg_64( uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len 
  * \param[in] p_data 		A stream of bytes to write to device.
  */
 void
-dw_write_reg( 	uint32_t  reg_addr, 
-				uint32_t  reg_len, 
+dw_write_reg( 	uint32_t  reg_addr,
+				uint32_t  reg_len,
 				uint8_t * p_data )
 {
 	uint8_t instruction = 0x80 | (reg_addr & 0x3F);
 	dw_spi_write_byte(instruction, DW_SPI_TRANSFER_CONT);
 	dw_spi_read_byte();
-	
+
 	dw_spi_write_n_bytes( reg_len, p_data, DW_SPI_TRANSFER_DONE);
 }
 
@@ -657,31 +657,31 @@ dw_write_reg( 	uint32_t  reg_addr,
  * \param[in] subreg_addr	Subregister address as specified in the manual and
  *                           by the DW_SUBREG_* defines.
  * \param[in] subreg_len	Nunmber of bytes to write. Should not be longer
- *                           than the length specified in the manual or the 
+ *                           than the length specified in the manual or the
  * 							 DW_SUBLEN_* defines.
  * \param[in] p_data 		A stream of bytes to write to device.
  */
 void
-dw_write_subreg( 	uint32_t  reg_addr, 
-					uint32_t  subreg_addr, 
-					uint32_t  subreg_len, 
+dw_write_subreg( 	uint32_t  reg_addr,
+					uint32_t  subreg_addr,
+					uint32_t  subreg_len,
 					uint8_t * p_data )
 {
 	// Check if 3-octet header is requried or if 2 will do
 	uint32_t isThreeOctet = (subreg_addr > 0x7F);
-	
+
 	// Prepare instruction
 	uint32_t instruction = 0x0;
 	instruction = (0xC0 | (reg_addr&0x3F));
 	instruction = (instruction << 8) | (subreg_addr&0x7F       ) | (isThreeOctet<<7);
 	instruction = (instruction << 8) | (subreg_addr&0x7F80 >> 7);
-	
+
 	// Write instruction
 	uint8_t * pInstr = (uint8_t *)(&instruction) + 2;
 	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
 	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
 	if (isThreeOctet) { dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT); }
-	
+
 	// Write data
 	dw_spi_write_n_bytes( subreg_len, p_data, DW_SPI_TRANSFER_DONE);
 }
@@ -699,18 +699,18 @@ dw_write_subreg( 	uint32_t  reg_addr,
  *     pp_data[1] = (uint8_t *)&msgRangeInit;
  *     dw_transmit_multiple_data( pp_data, data_len, n_data_segments, DW_TRANCEIVE_SYNC );
  *     \endcode
- * 
+ *
  * \param[in] reg_addr 			Destination register on dw1000.
  * \param[in] reg_len 			Length of register on dw1000.
  * \param[in] pp_data 			Array of data segments.
  * \param[in] p_data_len 		Length of each data segment.
  * \param[in] len_pp_data 		Length of pp_data.
  */
-void 
-dw_write_reg_multiple_data( uint32_t    reg_addr, 
-							uint32_t    reg_len, 
-							uint8_t  ** pp_data, 
-							uint32_t *  p_data_len, 
+void
+dw_write_reg_multiple_data( uint32_t    reg_addr,
+							uint32_t    reg_len,
+							uint8_t  ** pp_data,
+							uint32_t *  p_data_len,
 							uint32_t    len_pp_data )
 {
 	// Get total length of data.
@@ -737,9 +737,9 @@ dw_write_reg_multiple_data( uint32_t    reg_addr,
 
 /**
  * \brief Reads a value from the one time programmable memory.
- * 
+ *
  * \param [in] otp_addr The address to read data from.
- * 
+ *
  * \return Contents of the otp memory location.
  */
 uint32_t
@@ -769,9 +769,9 @@ dw_read_otp_32( uint16_t otp_addr )
  * must be configured with function dw_write_tx_conf( data_len, tx_conf ) before
  * running dw_transmit().
  *
- * \param receive_type 	[in] 	Specifies whether to use asyncronous or 
+ * \param receive_type 	[in] 	Specifies whether to use asyncronous or
  * 								syncronous communication.
- * 
+ *
  */
 void
 dw_receive( dw1000_tranceive_t receive_type )
@@ -811,7 +811,7 @@ dw_receive( dw1000_tranceive_t receive_type )
 				has_received |= (status_reg>>31>>1) & DW_RXPREJ_MASK;
 			}
 			while( !has_received );
-			
+
 			dw_get_rx_buffer();
 			break;
 	}
@@ -822,17 +822,17 @@ dw_receive( dw1000_tranceive_t receive_type )
  * \brief Transmit a frame either syncronously or asyncronously. The DW1000
  * must be configured with function dw_write_tx_conf( data_len, tx_conf ) before
  * running dw_transmit().
- * 
+ *
  * \param[in] p_data 			Pointer to data that is to be transmitted.
  * \param[in] data_len 		 	Length of data pointed to by p_data.
- * \param[in] transmit_type 	Specifies whether to use asyncronous or 
+ * \param[in] transmit_type 	Specifies whether to use asyncronous or
  * 								syncronous communication.
  */
 void dw_transmit( uint8_t * p_data, uint32_t data_len, dw1000_tranceive_t transmit_type )
 {
-	// TODO: Functionality can be separated so that this function only triggers 
-	// a transmission, akin to how reception works. You would then have a 
-	// singluar dw_transmit and two upload functions, dw_upload_data and 
+	// TODO: Functionality can be separated so that this function only triggers
+	// a transmission, akin to how reception works. You would then have a
+	// singluar dw_transmit and two upload functions, dw_upload_data and
 	// dw_upload_multiple_data.
 	if (   dw1000.state == DW_STATE_RECEIVING
 		|| dw1000.state == DW_STATE_TRANSMITTING )
@@ -878,7 +878,7 @@ void dw_transmit( uint8_t * p_data, uint32_t data_len, dw1000_tranceive_t transm
 /**
  * \brief Transmit a single data frame spread out over several arrays.
  * Loads all data arrays into dw1000 memory before starting the transmission.
- * 
+ *
  * \param[in] pp_data 		 	An array of arrays to be transmitted as a
  * 								single frame.
  * \param[in] p_data_len 		Length of each element in pp_array.
@@ -982,8 +982,8 @@ void dw_disable_adc()
 /**
  * \brief Private function. Forces the ADC to update sensor samples.
  *
- * \bug Seems like the values of tc_sarl are either not updated or updated 
- * incorrectly. See DW1000-User_Manual-V2.00.pdf page 56 - "Measuring IC 
+ * \bug Seems like the values of tc_sarl are either not updated or updated
+ * incorrectly. See DW1000-User_Manual-V2.00.pdf page 56 - "Measuring IC
  * temperature and voltage" for details on how sampling is performed.
  *
  * \todo Make private in documentation.
@@ -1018,14 +1018,14 @@ void dw_adc_sample()
 /**
  * \brief Gets a temperature reading from the dw1000.
  *
- * \param[in] temp_source 	 	If given as DW_ADC_SRC_LATEST a new senors 
+ * \param[in] temp_source 	 	If given as DW_ADC_SRC_LATEST a new senors
  *                     			sample will be taken and reported.
  *                    			If given as DW_ADC_SRC_WAKEUP the reading from
  *                    			the last wakeup will be used.
- * 
+ *
  * \return Temperature measurement from adc
  *
- * \bug The values generated by these functions are not to be trusted! There 
+ * \bug The values generated by these functions are not to be trusted! There
  * seems to be an error in the \ref dw_adc_sample function.
  */
 float
@@ -1058,16 +1058,16 @@ dw_get_temperature( dw_adc_src_t temp_source )
 /**
  * \brief Gets a voltage reading from the dw1000.
  *
- * \param[in] voltage_source 	If given as DW_ADC_SRC_LATEST a new senors 
+ * \param[in] voltage_source 	If given as DW_ADC_SRC_LATEST a new senors
  *                     			sample will be taken and reported.
  *                    			If given as DW_ADC_SRC_WAKEUP the reading from
  *                    			the last wakeup will be used.
- * 
+ *
  * NOTE: The effective range of measurement is 2.25 V to 3.76 V.
- * 
+ *
  * \return Voltage measurement from adc
- * 
- * \bug The values generated by these functions are not to be trusted! There 
+ *
+ * \bug The values generated by these functions are not to be trusted! There
  * seems to be an error in the \ref dw_adc_sample function.
  */
 float
@@ -1076,7 +1076,7 @@ dw_get_voltage( dw_adc_src_t voltage_source )
 	// Get calibration data from otp. Vmeas @ 3.3V residies in addr 0x8.
 	uint32_t otp_voltage = dw_read_otp_32(0x008) & 0xFF;
 	uint32_t read_voltage;
-	
+
 	switch (voltage_source)
 	{
 		case DW_ADC_SRC_LATEST:
@@ -1100,13 +1100,13 @@ dw_get_voltage( dw_adc_src_t voltage_source )
 /* Communication quality assessment                                          */
 /*===========================================================================*/
 /**
- * \brief Gives a measure of the standard deviation of the noise level in the 
- * data in the Rx Frame Quality Information register (\ref DW_REG_RX_FQUAL). 
- * Can  be used as an absolute value or compared to the value reported in the 
- * \ref DW_FP_AMPL2 field of the Rx Frame Quality Information register. A large 
- * noise value is generally bad. If the noise value is larger than the value 
+ * \brief Gives a measure of the standard deviation of the noise level in the
+ * data in the Rx Frame Quality Information register (\ref DW_REG_RX_FQUAL).
+ * Can  be used as an absolute value or compared to the value reported in the
+ * \ref DW_FP_AMPL2 field of the Rx Frame Quality Information register. A large
+ * noise value is generally bad. If the noise value is larger than the value
  * in FP_AMPL2 the quality is quite possibly bad.
- * 
+ *
  * \return Noise level of measurement.
  */
 float
@@ -1116,7 +1116,7 @@ dw_get_noise_level()
 }
 
 /**
- * \brief Returns the estimated receive signal amplitude in the first path. 
+ * \brief Returns the estimated receive signal amplitude in the first path.
  * Used to calculate the estimated power in the first path.
  * \return Amplitude in first path.
  */
@@ -1128,9 +1128,9 @@ dw_get_fp_ampl()
 
 /**
  * \brief Estimate total power received in all paths.
- * 
- * \note The function used to calculate this requires a logarithm. Thus this 
- * value needs to be post processed. Use 10 * log_10( dw_get_rx_power() ) - a 
+ *
+ * \note The function used to calculate this requires a logarithm. Thus this
+ * value needs to be post processed. Use 10 * log_10( dw_get_rx_power() ) - a
  * where a is a constant 115.72 for 16 MHZ PRF and 121.74 for 64 MHZ PRF.
  */
 float
@@ -1151,16 +1151,16 @@ dw_get_rx_power()
 
 	// If you have access to logarithm...
 	//rx_power = 10.f * log10( (float)(c * powf(2,17)) / (float)(n*n) ) - a;
-	// This value needs external processing 
+	// This value needs external processing
 	rx_power = (float)(c * powf(2,17)) / (float)(n*n);
 	return rx_power;
 }
 /**
  * \brief Calculates the estimated signal power in the first path.
  * \return Estimated reception signal power in the first path. [dBmW]
- * 
- * \note The function used to calculate this requires a logarithm. Thus this 
- * value needs to be post processed. Use 10 * log_10( dw_get_rx_power() ) - a 
+ *
+ * \note The function used to calculate this requires a logarithm. Thus this
+ * value needs to be post processed. Use 10 * log_10( dw_get_rx_power() ) - a
  * where a is a constant 115.72 for 16 MHZ PRF and 121.74 for 64 MHZ PRF.
  */
 float dw_get_fp_power()
@@ -1236,7 +1236,7 @@ dw_get_rx_buffer(void)
 
 	// Store rx data in global variable rxBuffer
 	dw1000.receive_buffer_len = rx_len;
-	
+
 	if (rx_len > 0)
 	{
 		// Store rx data in global variable rxBuffer
@@ -1251,7 +1251,7 @@ dw_get_rx_buffer(void)
  * \brief Sets the DW1000 rx timeout interval. If no preamble has been
  * 			discovered in this time the event flag RXRFTO is set.
  * \param[in] us 	 	Timeout period in microseconds (~1.026 us per tick).
- */	
+ */
 void dw_set_rx_timeout( uint16_t us )
 {
 	dw_write_reg( DW_REG_RX_FWTO, DW_LEN_RX_FWTO, (uint8_t *)&us );
@@ -1335,11 +1335,11 @@ dw_get_antenna_delay()
 }
 
 /**
- * \brief Setter for the delayed transmit/receive register. If delayed operation 
+ * \brief Setter for the delayed transmit/receive register. If delayed operation
  * is enabled the transmission/receeption will not take place until the system
  * time has exceeded this value.
  *
- * \note The low order nine bits are ignored. Thus, when working with 
+ * \note The low order nine bits are ignored. Thus, when working with
  * dx_timestamps the macro \ref DX_TIMESTAMP_CLEAR_LOW_9 can be quite helpful.
  */
 void
@@ -1363,9 +1363,9 @@ dw_get_dx_timestamp()
  * \code
  * dw_enable_interrupt( DW_MTXFRS_MASK | DW_MRXPHE_MASK | DW_MRXDFR_MASK );
  * \endcode
- * The interrupt constants can be found in dw1000-base.h under BITFIELDS for 
+ * The interrupt constants can be found in dw1000-base.h under BITFIELDS for
  * DW_REG_SYS_MASK.
- * 
+ *
  * \param[in] 	mask 	Value to overwrite SYS_MASK register with.
  */
 void
@@ -1375,7 +1375,7 @@ dw_enable_interrupt( uint32_t mask )
 }
 
 /**
- * \brief Clear a pending masked interrupt. Usage same as \ref 
+ * \brief Clear a pending masked interrupt. Usage same as \ref
  * dw_enable_interrupt.
  */
 void
@@ -1400,7 +1400,7 @@ dw_trxoff()
 }
 
 /**
- * \brief Initiates a new reception on the dw1000. Assumes that it has been 
+ * \brief Initiates a new reception on the dw1000. Assumes that it has been
  * configured already.
  */
 void
@@ -1414,7 +1414,7 @@ dw_init_rx(void)
 }
 
 /**
- * \brief Starts a new transmission. Data must either already be uploaded to 
+ * \brief Starts a new transmission. Data must either already be uploaded to
  * DW1000 or be uploaded VERY shortly.
  */
 void
