@@ -48,6 +48,29 @@
 extern "C" {
 #endif
 
+  
+  
+typedef struct spi_mcr {
+  uint8_t SPI_HALT:1;
+  uint8_t RESERVED:7;
+  uint8_t SMPL_PT:2;
+  uint8_t CLR_RXF:1;
+  uint8_t CLR_TXF:1;
+  uint8_t DIS_RXF:1;
+  uint8_t DIS_TXF:1;
+  uint8_t MDIS:1;
+  uint8_t DOZE:1;
+  uint8_t PCSIS:6;
+  uint8_t RESERVED2:2;
+  uint8_t ROOE:1;
+  uint8_t PCSSE:1;
+  uint8_t MTFE:1;
+  uint8_t FRZ:1;
+  uint8_t DCONF:2;
+  uint8_t CONT_SCKE:1;
+  uint8_t MSTR:1;
+} spi_mcr_t;
+  
 /* Number of CTAR registers in SPI module, see K60 Reference Manual for details. */
 #define NUM_CTAR 2
 

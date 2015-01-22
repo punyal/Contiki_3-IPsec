@@ -1,5 +1,8 @@
-#include "dw1000-spi.h"
-#include "MK60N512VMD100.h"
+#include <stddef.h>
+#include <stdint.h>
+#include "K60.h"
+
+
 
 /**
  * \brief Initialise the SPI interface. The mulle SPI uses pins on port E.
@@ -33,8 +36,21 @@ dw_spi_init(void)
 void
 dw_spi_write_byte(uint8_t byte, dw_spi_transfer_flag_t continue_transfer)
 {
-	uint32_t chipSel = 0x1;
+	const uint32_t chipSel = 0x1;
+	
 	uint32_t send = SPI_PUSHR_PCS(chipSel) | SPI_PUSHR_TXDATA(byte);
+	
+	
+	int result = spi_transfer_blocking(   SPI_1, 
+					      const uint8_t ctas, 
+					      chipSel,
+					      const spi_transfer_flag_t cont, 
+					      NULL,
+					      &byte, 
+					      0x01, 
+					      0x01)
+	
+	
 	
 	if (continue_transfer) { send |= SPI_PUSHR_CONT_MASK; }
 
