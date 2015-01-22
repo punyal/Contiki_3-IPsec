@@ -1,0 +1,47 @@
+[ ] = Not implemented
+[x] = Implemented in driver
+
+PRF ->
+	[x] AGC_TUNE1
+	[x] DRX_TUNE1a
+
+	[x] *CHAN_CTRL (RX)
+	[x] *TX_FCTRL  (TX)
+
+Channel ->
+	[x] RF_TXCTRL
+	[x] RF_RXCTRL
+	[x] TC_PGDELAY
+	[x] FS_PLLCFG
+	[x] FS_PLLTUNE
+
+	[x] *CHAN_CTRL
+
+Preamble length ->
+	[x] DRX_TUNE1b
+	[x] DRX_TUNE4h
+	[x] *TX_FCTRL (TX)
+
+Preamble code ->
+	[x] *CHAN_CTRL
+
+pac_size ->
+	[x] DRX_TUNE2
+
+sfd ->
+	[x] DRX_TUNE0b
+
+	[x] *CHAN_CTRL
+
+110kbps ->
+	[x] DRX_TUNE0b
+	[x] *SYS_CFG  (RX)
+	[ ] *TX_FCTRL (TX)
+
+850kbps ->
+	[x] DRX_TUNE0b
+	[ ] *TX_FCTRL (TX)
+
+6.8Mbps ->
+	[x] DRX_TUNE0b
+	[ ] *TX_FCTRL (TX)
