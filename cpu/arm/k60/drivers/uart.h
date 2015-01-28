@@ -78,10 +78,6 @@ void uart_set_rx_callback(const unsigned int uart_num, int (*callback)(unsigned 
 
 /*
  * The constant numbers will be computed compile time by most (all?) compilers.
- * The suffix ull on 64ull is in order to avoid overflows in the variable in
- * the compiler when computing the number. Without ull suffix the number will
- * be truncated to a 32 bit integer before the division yielding the wrong
- * fine adjust value.
  */
 /*
  * The below calculation will yield a fine adjust value rounded to the nearest
