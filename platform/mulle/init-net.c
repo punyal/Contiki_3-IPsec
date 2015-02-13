@@ -66,7 +66,28 @@
 #warning Using user defined node id
 #endif
 
-static unsigned char id[8] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, NODE_ID };
+static union {
+  uint64_t u64;
+  uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
+  uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
+  uint8_t u8[sizeof(uint64_t) / sizeof(uint8_t)];
+} id = { .u8 = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, NODE_ID } };
+
+/** @brief Simple hash function used for generating link-local IPv6 and EUI64
+ *         (64 bit) from CPUID (128 bit)
+ *
+ * @see http://www.cse.yorku.ca/~oz/hash.html */
+static uint32_t
+djb2_hash(const uint8_t *buf, size_t len)
+{
+    uint32_t hash = 5381;
+    size_t i;
+
+    for (i = 0; i < len; ++i)
+        hash = ((hash << 5) + hash) + buf[i]; /* hash * 33 + c */
+
+    return hash;
+}
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -76,7 +97,7 @@ set_rime_addr(void)
   unsigned int i;
 
   /* memset(&addr, 0x65, sizeof(linkaddr_t)); */
-  memcpy(addr.u8, id, sizeof(addr.u8));
+  memcpy(addr.u8, id.u8, sizeof(addr.u8));
 
   linkaddr_set_node_addr(&addr);
   PRINTF("Rime started with address ");
@@ -91,18 +112,16 @@ void
 init_net(void)
 {
 #ifndef WITH_SLIP
-  id[0] = (((SIM->UIDL) >> (8 * 0)) & 0xFF) | 0x02;
-  id[1] = ((SIM->UIDL) >> (8 * 1)) & 0xFF;
-  id[2] = ((SIM->UIDL) >> (8 * 2)) & 0xFF;
-  id[3] = ((SIM->UIDL) >> (8 * 3)) & 0xFF;
-  id[4] = ((SIM->UIDML) >> (8 * 0)) & 0xFF;
-  id[5] = ((SIM->UIDML) >> (8 * 1)) & 0xFF;
-  id[6] = ((SIM->UIDML) >> (8 * 2)) & 0xFF;
-  id[7] = ((SIM->UIDML) >> (8 * 3)) & 0xFF;
+  uint8_t i;
+  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
+  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
+  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
 #else
   /* Use fixed address for border router. */
-  id[0] = 0x02;
-  id[7] = 0x01;
+  id.u32[0] = 0x00000000;
+  id.u32[1] = 0x00000000;
+  id.u8[0] = 0x02;
+  id.u8[7] = 0x01;
 #endif
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
@@ -119,7 +138,7 @@ init_net(void)
   }
   rf230_set_channel(RF_CHANNEL);
 
-  memcpy(&uip_lladdr.addr, id, sizeof(uip_lladdr.addr));
+  memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
 
   queuebuf_init();
   NETSTACK_RDC.init();
