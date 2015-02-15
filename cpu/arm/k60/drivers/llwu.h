@@ -149,7 +149,7 @@ void llwu_set_wakeup_pin(const llwu_wakeup_pin_t pin, const llwu_wakeup_edge_t e
  * instructions (same as used for implementing thread safe locks) for the
  * inhibit counters themselves to make sure we never lose an increment or
  * decrement. */
-#define LLWU_INHIBIT_STOP() (exclusive_increment(&llwu_inhibit_lls_sema))
+#define LLWU_INHIBIT_STOP() (exclusive_increment(&llwu_inhibit_stop_sema))
 #define LLWU_INHIBIT_VLPS() (exclusive_increment(&llwu_inhibit_vlps_sema))
 #define LLWU_INHIBIT_LLS() (exclusive_increment(&llwu_inhibit_lls_sema))
 #define LLWU_UNINHIBIT_STOP() (exclusive_decrement(&llwu_inhibit_stop_sema))
