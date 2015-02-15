@@ -59,7 +59,6 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
-#if UIP_CONF_IPV6
 /*---------------------------------------------------------------------------*/
 extern rpl_of_t RPL_OF;
 static rpl_of_t * const objective_functions[] = {&RPL_OF};
@@ -333,6 +332,7 @@ rpl_repair_root(uint8_t instance_id)
     PRINTF("RPL: rpl_repair_root triggered but not root\n");
     return 0;
   }
+  RPL_STAT(rpl_stats.root_repairs++);
 
   RPL_LOLLIPOP_INCREMENT(instance->current_dag->version);
   RPL_LOLLIPOP_INCREMENT(instance->dtsn_out);
@@ -1319,5 +1319,4 @@ rpl_lock_parent(rpl_parent_t *p)
   nbr_table_lock(rpl_parents, p);
 }
 /*---------------------------------------------------------------------------*/
-#endif /* UIP_CONF_IPV6 */
 /** @} */
