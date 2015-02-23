@@ -193,6 +193,11 @@ _open_r(struct _reent *r, const char *name, int flags, int mode) {
   if (flags & O_WRONLY) {
     cfs_flags |= CFS_WRITE;
   }
+  if (cfs_flags == 0) {
+    /* O_RDONLY is defined as 0 on some systems, we default to open file for
+     * reading when nothing matches above. */
+    cfs_flags = CFS_READ;
+  }
   fd = cfs_open(name, cfs_flags);
   if (fd < 0) {
     /* Not found or whatever, CFS doesn't tell us why it failed. */
