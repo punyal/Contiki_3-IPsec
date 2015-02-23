@@ -55,9 +55,9 @@
 #define PRINTF(...)
 #endif
 
-#if WITH_UIP6
+#if NETSTACK_CONF_WITH_IPV6
 #include "net/ipv6/uip-ds6.h"
-#endif /* WITH_UIP6 */
+#endif /* NETSTACK_CONF_WITH_IPV6 */
 
 #define UIP_OVER_MESH_CHANNEL 8
 #ifndef NODE_ID
@@ -105,7 +105,7 @@ init_net(void)
   id[0] = 0x02;
   id[7] = 0x01;
 #endif
-#if WITH_UIP6
+#if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
   {
@@ -165,7 +165,7 @@ init_net(void)
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
   rf230_init();
   rf230_driver.off();
-#endif /* WITH_UIP6 */
+#endif /* NETSTACK_CONF_WITH_IPV6 */
 }
 /*---------------------------------------------------------------------------*/
 

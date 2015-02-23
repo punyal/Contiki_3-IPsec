@@ -51,10 +51,6 @@ ifdef MULLEAPPS
   CONTIKI_SOURCEFILES += $(APP_SOURCES) $(DSC_SOURCES)
 endif
 
-ifdef UIP_CONF_IPV6
-CFLAGS += -DWITH_UIP6=1
-endif
-
 # Backwards compatibility with older environment settings (.profile, .bashrc etc.)
 # MULLE_SERIAL was called MULLE_BOARD_SERIAL_NUMBER previously.
 ifdef MULLE_BOARD_SERIAL_NUMBER
@@ -212,6 +208,9 @@ reset:
 	$(RESET) $(RESET_FLAGS)
 
 
-MODULES+=core/net core/net/ip core/net/ipv4 core/net/ipv6 core/net/rime \
-         core/net/mac core/net/rpl core/net/mac/contikimac core/net/mac/cxmac \
-         core/net/llsec
+MODULES += \
+  core/net \
+  core/net/mac \
+  core/net/mac/contikimac \
+  core/net/mac/cxmac \
+  core/net/llsec
