@@ -34,7 +34,6 @@
 #include "contiki.h"
 #include "cmd.h"
 
-#include "radio/rf230/radio.h"
 #include "radio/rf230bb/rf230bb.h"
 
 

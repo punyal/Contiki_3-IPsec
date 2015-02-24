@@ -34,7 +34,7 @@
 #define QUEUEBUF_CONF_NUM          4
 
 #undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    140
+#define UIP_CONF_BUFFER_SIZE    2048
 
 #undef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER                 0
@@ -50,6 +50,8 @@
 #define CMD_CONF_HANDLERS slip_radio_cmd_handler,cmd_handler_rf230
 #elif CONTIKI_TARGET_ECONOTAG
 #define CMD_CONF_HANDLERS slip_radio_cmd_handler,cmd_handler_mc1322x
+#elif CONTIKI_TARGET_MULLE
+#define CMD_CONF_HANDLERS slip_radio_cmd_handler,cmd_handler_rf230
 #else
 #define CMD_CONF_HANDLERS slip_radio_cmd_handler
 #endif
@@ -60,8 +62,8 @@
 #define NETSTACK_CONF_MAC     nullmac_driver
 
 #undef NETSTACK_CONF_RDC
-/* #define NETSTACK_CONF_RDC     nullrdc_noframer_driver */
-#define NETSTACK_CONF_RDC     contikimac_driver
+#define NETSTACK_CONF_RDC     nullrdc_noframer_driver
+//#define NETSTACK_CONF_RDC     contikimac_driver
 
 #undef NETSTACK_CONF_NETWORK
 #define NETSTACK_CONF_NETWORK slipnet_driver
