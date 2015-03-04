@@ -105,22 +105,35 @@ typedef uint32_t rtimer_clock_t;
 #define UART_CONF_DEFAULT_TXBUFSIZE 8
 #endif
 
-#if WITH_UIP6
 #ifndef NETSTACK_CONF_NETWORK
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #endif /* NETSTACK_CONF_NETWORK */
+
 #ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC           csma_driver
+#define NETSTACK_CONF_MAC     csma_driver
 #endif /* NETSTACK_CONF_MAC */
+
 #ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC           nullrdc_driver
+/* #define NETSTACK_CONF_RDC     contikimac_driver */
+#define NETSTACK_CONF_RDC     nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
+
+#ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
+#endif /* NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE */
+
 #ifndef NETSTACK_CONF_FRAMER
-#define NETSTACK_CONF_FRAMER        framer_802154
+#if NETSTACK_CONF_WITH_IPV6
+#define NETSTACK_CONF_FRAMER  framer_802154
+#else /* NETSTACK_CONF_WITH_IPV6 */
+#define NETSTACK_CONF_FRAMER  contikimac_framer
+#endif /* NETSTACK_CONF_WITH_IPV6 */
 #endif /* NETSTACK_CONF_FRAMER */
+
 #ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO         rf230_driver
 #endif /* NETSTACK_CONF_RADIO */
+
 
 #define SICSLOWPAN_CONF_MAXAGE      1
 #define RF230_CONF_RX_BUFFERS       10
@@ -129,7 +142,7 @@ typedef uint32_t rtimer_clock_t;
 #define LINKADDR_CONF_SIZE          8
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE        1514
+#define UIP_CONF_BUFFER_SIZE        2048
 #endif /* UIP_CONF_BUFFER_SIZE */
 
 #ifndef QUEUEBUF_CONF_NUM
@@ -139,10 +152,6 @@ typedef uint32_t rtimer_clock_t;
 #ifndef UIP_CONF_ROUTER
 #define UIP_CONF_ROUTER                 1
 #endif /* UIP_CONF_ROUTER */
-
-#ifndef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL               1
-#endif /* UIP_CONF_IPV6_RPL */
 
 #define SICSLOWPAN_CONF_COMPRESSION_IPV6    0
 #define SICSLOWPAN_CONF_COMPRESSION_HC1     1
@@ -171,7 +180,7 @@ typedef uint32_t rtimer_clock_t;
 #define UIP_CONF_ND6_RETRANS_TIMER  10000
 #endif
 
-#define UIP_CONF_IPV6                   1
+//~ #define NETSTACK_CONF_WITH_IPV6         1
 #define UIP_CONF_IPV6_QUEUE_PKT         1
 #define UIP_CONF_IPV6_CHECKS            1
 #define UIP_CONF_IPV6_REASSEMBLY        0
@@ -208,8 +217,6 @@ typedef uint32_t rtimer_clock_t;
 #ifndef UIP_CONF_TCP
 #define UIP_CONF_TCP                0
 #endif
-
-#endif /* WITH_UIP6 */
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
