@@ -66,17 +66,19 @@ static uint8_t uart4_txbuf_data[UART4_TXBUFSIZE];
 static uint8_t uart5_txbuf_data[UART5_TXBUFSIZE];
 #endif
 
-static inline void tx_irq_handler(const unsigned int uart_num, const uint8_t s1) {
+static inline void tx_irq_handler(const unsigned int uart_num) {
   volatile UART_Type *uart_dev = UART[uart_num];
-  if((s1 & UART_S1_TC_MASK) && (uart_dev->C2 & UART_C2_TCIE_MASK) && (transmitting[uart_num] != 0)) {
-    /* transmission complete, allow STOP modes again */
-    LLWU_UNINHIBIT_STOP();
+  if((uart_dev->S1 & UART_S1_TC_MASK) && (uart_dev->C2 & UART_C2_TCIE_MASK)) {
+    if (transmitting[uart_num] != 0) {
+      /* transmission complete, allow STOP modes again */
+      LLWU_UNINHIBIT_STOP();
+      transmitting[uart_num] = 0;
+    }
     /* Disable transmission complete interrupt */
     uart_dev->C2 &= ~(UART_C2_TCIE_MASK);
-    transmitting[uart_num] = 0;
   }
 
-  if((s1 & UART_S1_TDRE_MASK) && (uart_dev->C2 & UART_C2_TIE_MASK)) {
+  if((uart_dev->S1 & UART_S1_TDRE_MASK) && (uart_dev->C2 & UART_C2_TIE_MASK)) {
     int ret;
     ret = ringbuf_get(&uart_txbuf[uart_num]);
     if (ret < 0) {
@@ -92,10 +94,13 @@ static inline void tx_irq_handler(const unsigned int uart_num, const uint8_t s1)
   }
 }
 
-static inline void rx_irq_handler(const unsigned int uart_num, const uint8_t s1) {
+static inline void rx_irq_handler(const unsigned int uart_num) {
   volatile UART_Type *uart_dev = UART[uart_num];
-  if((s1 & UART_S1_RDRF_MASK) && (rx_callback[uart_num] != NULL)) {
-    (rx_callback[uart_num])(uart_dev->D);
+  if(uart_dev->S1 & UART_S1_RDRF_MASK) {
+    uint8_t c = uart_dev->D; /* RDRF flag is cleared by first reading S1, then reading D */
+    if (rx_callback[uart_num] != NULL) {
+      (rx_callback[uart_num])(c);
+    }
   }
 
   if((uart_dev->S2 & UART_S2_RXEDGIF_MASK)) {
@@ -313,11 +318,8 @@ uart_set_rx_callback(const unsigned int uart_num, rx_callback_t callback)
 void
 _isr_uart0_status()
 {
-  int s1;
-  s1 = UART0->S1; /* Clear status 1 register */
-
-  tx_irq_handler(0, s1);
-  rx_irq_handler(0, s1);
+  tx_irq_handler(0);
+  rx_irq_handler(0);
 }
 #endif /* UART0_CONF_ENABLE */
 
@@ -325,11 +327,8 @@ _isr_uart0_status()
 void
 _isr_uart1_status()
 {
-  int s1;
-  s1 = UART1->S1; /* Clear status 1 register */
-
-  tx_irq_handler(1, s1);
-  rx_irq_handler(1, s1);
+  tx_irq_handler(1);
+  rx_irq_handler(1);
 }
 #endif /* UART1_CONF_ENABLE */
 
@@ -337,11 +336,8 @@ _isr_uart1_status()
 void
 _isr_uart2_status()
 {
-  int s1;
-  s1 = UART2->S1; /* Clear status 1 register */
-
-  tx_irq_handler(2, s1);
-  rx_irq_handler(2, s1);
+  tx_irq_handler(2);
+  rx_irq_handler(2);
 }
 #endif /* UART2_CONF_ENABLE */
 
@@ -349,11 +345,8 @@ _isr_uart2_status()
 void
 _isr_uart3_status()
 {
-  int s1;
-  s1 = UART3->S1; /* Clear status 1 register */
-
-  tx_irq_handler(3, s1);
-  rx_irq_handler(3, s1);
+  tx_irq_handler(3);
+  rx_irq_handler(3);
 }
 #endif /* UART3_CONF_ENABLE */
 
@@ -361,11 +354,8 @@ _isr_uart3_status()
 void
 _isr_uart4_status()
 {
-  int s1;
-  s1 = UART4->S1; /* Clear status 1 register */
-
-  tx_irq_handler(4, s1);
-  rx_irq_handler(4, s1);
+  tx_irq_handler(4);
+  rx_irq_handler(4);
 }
 #endif /* UART4_CONF_ENABLE */
 
@@ -373,10 +363,7 @@ _isr_uart4_status()
 void
 _isr_uart5_status()
 {
-  int s1;
-  s1 = UART5->S1; /* Clear status 1 register */
-
-  tx_irq_handler(5, s1);
-  rx_irq_handler(5, s1);
+  tx_irq_handler(5);
+  rx_irq_handler(5);
 }
 #endif /* UART5_CONF_ENABLE */
