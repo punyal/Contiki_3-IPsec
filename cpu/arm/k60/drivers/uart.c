@@ -98,15 +98,28 @@ static inline void tx_irq_handler(const unsigned int uart_num) {
 }
 
 static inline void rx_irq_handler(const unsigned int uart_num) {
-  volatile UART_Type *uart_dev = UART[uart_num];
+  UART_Type *uart_dev = UART[uart_num];
+  static uint8_t receiving[NUM_UARTS] = {0};
   if(uart_dev->S1 & UART_S1_RDRF_MASK) {
-    uint8_t c = uart_dev->D; /* RDRF flag is cleared by first reading S1, then reading D */
+    volatile uint8_t c = uart_dev->D; /* RDRF flag is cleared by first reading S1, then reading D */
     if (rx_callback[uart_num] != NULL) {
       (rx_callback[uart_num])(c);
     }
   }
+  if ((uart_dev->S2 & UART_S2_RAF_MASK) == 0) {
+    /* Receiver idle */
+    if (receiving[uart_num] != 0) {
+      receiving[uart_num] = 0;
+      LLWU_UNINHIBIT_STOP();
+    }
+  }
 
   if((uart_dev->S2 & UART_S2_RXEDGIF_MASK)) {
+    /* Woken up by edge detect */
+    if (receiving[uart_num] == 0) {
+      LLWU_INHIBIT_STOP();
+      receiving[uart_num] = 1;
+    }
     /* Clear RX wake-up flag by writing a 1 to it */
     uart_dev->S2 |= UART_S2_RXEDGIF_MASK;
   }
@@ -205,8 +218,8 @@ uart_init(const unsigned int uart_num, uint32_t module_clk_hz, const uint32_t ba
   /* Fine adjust */
   uart_dev->C4 = (uart_dev->C4 & ~(UART_C4_BRFA_MASK)) | UART_C4_BRFA(brfa);
 
-  /* Enable transmitter and receiver and enable receive interrupt */
-  uart_dev->C2 |= UART_C2_TE_MASK | UART_C2_RE_MASK;
+  /* Enable transmitter */
+  uart_dev->C2 |= UART_C2_TE_MASK;
 
   /* Set up ring buffer and enable interrupt */
   switch (uart_num) {
@@ -284,19 +297,21 @@ uart_putstring(const unsigned int uart_num, const char *str)
 void
 uart_enable_rx_interrupt(const unsigned int uart_num)
 {
-  int tmp;
   UART_Type *uart_dev = UART[uart_num];
-  uart_dev->C2 |= UART_C2_RIE_MASK;
-  uart_dev->BDH |= UART_BDH_RXEDGIE_MASK; /* Enable wake interrupt */
+  uart_dev->C2 |= UART_C2_RIE_MASK; /* Enable RDRF interrupt */
+  uart_dev->BDH |= UART_BDH_RXEDGIE_MASK; /* Enable edge detect interrupt */
+  uart_dev->C2 |= UART_C2_RE_MASK; /* Enable receiver */
+  LLWU_INHIBIT_LLS(); /* LLS will disable receiver edge detection */
 }
 
 void
 uart_disable_rx_interrupt(const unsigned int uart_num)
 {
-  int tmp;
   UART_Type *uart_dev = UART[uart_num];
-  uart_dev->C2 &= ~(UART_C2_RIE_MASK);
-  uart_dev->BDH &= ~(UART_BDH_RXEDGIE_MASK); /* Disable wake interrupt */
+  uart_dev->C2 &= ~(UART_C2_RIE_MASK); /* Disable RDRF interrupt */
+  uart_dev->BDH &= ~(UART_BDH_RXEDGIE_MASK); /* Disable edge detect interrupt */
+  uart_dev->C2 &= ~(UART_C2_RE_MASK); /* Disable receiver */
+  LLWU_UNINHIBIT_LLS(); /* LLS will disable receiver edge detection */
 }
 
 void
