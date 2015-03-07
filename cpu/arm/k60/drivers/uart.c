@@ -218,6 +218,21 @@ uart_init(const unsigned int uart_num, uint32_t module_clk_hz, const uint32_t ba
   /* Fine adjust */
   uart_dev->C4 = (uart_dev->C4 & ~(UART_C4_BRFA_MASK)) | UART_C4_BRFA(brfa);
 
+  /* Enable FIFO buffers */
+  uart_dev->PFIFO |= UART_PFIFO_RXFE_MASK | UART_PFIFO_TXFE_MASK;
+  /* Set level to trigger TX interrupt whenever there is space in the TXFIFO (sizeof(TXFIFO) - 1) */
+  if ((uart_dev->PFIFO & UART_PFIFO_TXFIFOSIZE_MASK) != 0) {
+    uart_dev->TWFIFO = UART_TWFIFO_TXWATER((2 << ((uart_dev->PFIFO & UART_PFIFO_TXFIFOSIZE_MASK) >> UART_PFIFO_TXFIFOSIZE_SHIFT)) - 1);
+  }
+  else {
+    /* Missing hardware support */
+    uart_dev->TWFIFO = 0;
+  }
+  /* Trigger RX interrupt when there is 1 byte or more in the RXFIFO */
+  uart_dev->RWFIFO = 1;
+  /* Clear all hardware buffers now */
+  uart_dev->CFIFO = UART_CFIFO_RXFLUSH_MASK | UART_CFIFO_TXFLUSH_MASK;
+
   /* Enable transmitter */
   uart_dev->C2 |= UART_C2_TE_MASK;
 
