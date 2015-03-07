@@ -12,7 +12,6 @@ typedef int (*rx_callback_t)(unsigned char);
 
 static rx_callback_t rx_callback[NUM_UARTS] = { NULL };
 
-static volatile uint8_t transmitting[NUM_UARTS];
 
 #ifdef UART_CONF_DEFAULT_TXBUFSIZE
 #define UART_DEFAULT_TXBUFSIZE UART_CONF_DEFAULT_TXBUFSIZE
@@ -67,8 +66,9 @@ static uint8_t uart5_txbuf_data[UART5_TXBUFSIZE];
 #endif
 
 static inline void tx_irq_handler(const unsigned int uart_num) {
-  volatile UART_Type *uart_dev = UART[uart_num];
-  if((uart_dev->S1 & UART_S1_TC_MASK) && (uart_dev->C2 & UART_C2_TCIE_MASK)) {
+  static uint8_t transmitting[NUM_UARTS] = {0};
+  UART_Type *uart_dev = UART[uart_num];
+  if((uart_dev->C2 & UART_C2_TCIE_MASK) && (uart_dev->S1 & UART_S1_TC_MASK)) {
     if (transmitting[uart_num] != 0) {
       /* transmission complete, allow STOP modes again */
       LLWU_UNINHIBIT_STOP();
@@ -78,7 +78,7 @@ static inline void tx_irq_handler(const unsigned int uart_num) {
     uart_dev->C2 &= ~(UART_C2_TCIE_MASK);
   }
 
-  if((uart_dev->S1 & UART_S1_TDRE_MASK) && (uart_dev->C2 & UART_C2_TIE_MASK)) {
+  if((uart_dev->C2 & UART_C2_TIE_MASK) && (uart_dev->S1 & UART_S1_TDRE_MASK)) {
     int ret;
     ret = ringbuf_get(&uart_txbuf[uart_num]);
     if (ret < 0) {
@@ -88,8 +88,11 @@ static inline void tx_irq_handler(const unsigned int uart_num) {
       uart_dev->C2 |= UART_C2_TCIE_MASK;
     } else {
       /* queue next byte */
-      transmitting[uart_num] = 1;
       uart_dev->D = (uint8_t)(ret & 0xff);
+      if (transmitting[uart_num] == 0) {
+        LLWU_INHIBIT_STOP();
+        transmitting[uart_num] = 1;
+      }
     }
   }
 }
@@ -205,8 +208,6 @@ uart_init(const unsigned int uart_num, uint32_t module_clk_hz, const uint32_t ba
   /* Enable transmitter and receiver and enable receive interrupt */
   uart_dev->C2 |= UART_C2_TE_MASK | UART_C2_RE_MASK;
 
-  transmitting[uart_num] = 0;
-
   /* Set up ring buffer and enable interrupt */
   switch (uart_num) {
 #if UART0_CONF_ENABLE
@@ -254,24 +255,17 @@ uart_init(const unsigned int uart_num, uint32_t module_clk_hz, const uint32_t ba
 void
 uart_putchar(const unsigned int uart_num, const char ch)
 {
-  volatile UART_Type *uart_dev = UART[uart_num];
+  UART_Type *uart_dev = UART[uart_num];
   /* Try to push to ring buffer until it succeeds, ringbuf_put will return 0
    * when there is no space left. */
-  while(ringbuf_put(&uart_txbuf[uart_num], ch) == 0);
-
-  MK60_ENTER_CRITICAL_REGION();
+  while(ringbuf_put(&uart_txbuf[uart_num], ch) == 0) {
+    /* Ringbuffer full, retry. */
+    /* TODO: sleep or something */
+  }
+  /* Successfully added char to ring buffer */
   /* Enable transmitter interrupt, txbuf to UART data register data transfer is
    * performed by the interrupt service routine. */
   uart_dev->C2 |= UART_C2_TIE_MASK;
-
-  /* Possible race condition between UART ISR and this flag, transmitting is set
-   * by ISR, but checked here. I think enclosing these few lines with IRQ
-   * disable/enable calls will cure it. */
-  if (transmitting[uart_num] == 0) {
-    LLWU_INHIBIT_STOP();
-  }
-  MK60_LEAVE_CRITICAL_REGION();
-
   return;
 }
 
@@ -291,9 +285,7 @@ void
 uart_enable_rx_interrupt(const unsigned int uart_num)
 {
   int tmp;
-  volatile UART_Type *uart_dev = UART[uart_num];
-  tmp = uart_dev->S1; /* Clr status 1 register */
-  (void)tmp; /* Avoid compiler warnings [-Wunused-variable] */
+  UART_Type *uart_dev = UART[uart_num];
   uart_dev->C2 |= UART_C2_RIE_MASK;
   uart_dev->BDH |= UART_BDH_RXEDGIE_MASK; /* Enable wake interrupt */
 }
@@ -302,10 +294,9 @@ void
 uart_disable_rx_interrupt(const unsigned int uart_num)
 {
   int tmp;
-  volatile UART_Type *uart_dev = UART[uart_num];
-  tmp = uart_dev->S1; /* Clr status 1 register */
-  (void)tmp; /* Avoid compiler warnings [-Wunused-variable] */
+  UART_Type *uart_dev = UART[uart_num];
   uart_dev->C2 &= ~(UART_C2_RIE_MASK);
+  uart_dev->BDH &= ~(UART_BDH_RXEDGIE_MASK); /* Disable wake interrupt */
 }
 
 void
