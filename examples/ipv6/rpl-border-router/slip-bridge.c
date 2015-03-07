@@ -49,6 +49,10 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
+#ifndef SLIP_BRIDGE_BAUD
+#define SLIP_BRIDGE_BAUD 921600
+#endif
+
 void set_prefix_64(uip_ipaddr_t *);
 
 static uip_ipaddr_t last_sender;
@@ -83,7 +87,7 @@ slip_input_callback(void)
       }
       uip_len = 18;
       slip_send();
-      
+
     }
     uip_len = 0;
   }
@@ -95,7 +99,7 @@ slip_input_callback(void)
 static void
 init(void)
 {
-  slip_arch_init(BAUD2UBR(115200));
+  slip_arch_init(BAUD2UBR(SLIP_BRIDGE_BAUD));
   process_start(&slip_process, NULL);
   slip_set_input_callback(slip_input_callback);
 }
