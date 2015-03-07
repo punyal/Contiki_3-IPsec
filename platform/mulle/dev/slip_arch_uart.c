@@ -16,7 +16,8 @@ slip_arch_init(unsigned long ubr)
 {
   /* ubr is the desired baud rate, but the name comes from the msp430 platform
    * where baud is converted to some platform specific "UBR" parameter. */
-  /** \todo (MULLE) Handle baud rate requests in slip_arch_init */
+  /* (re-)initialize the UART module */
+  uart_init(BOARD_SLIP_UART_NUM, 0, ubr);
 
   int fd;
   struct stat st;
