@@ -105,6 +105,9 @@ typedef uint32_t rtimer_clock_t;
 #define UART_CONF_DEFAULT_TXBUFSIZE 8
 #endif
 
+/* Disable slip-bridge implementation of putchar because it messes up newlib buffered stdio */
+#define SLIP_BRIDGE_CONF_NO_PUTCHAR 1
+
 #ifndef NETSTACK_CONF_NETWORK
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #endif /* NETSTACK_CONF_NETWORK */
