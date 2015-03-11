@@ -1709,6 +1709,7 @@ rf230_read(void *buf, unsigned short bufsize)
       while((cca & 0x80) == 0) {
         cca = hal_register_read(RG_TRX_STATUS);
       }
+      sei();
       /* SREG=saved_sreg; / * TODO: K60 * / */
     }
 #endif

@@ -80,8 +80,8 @@ typedef uint32_t rtimer_clock_t;
 /* Compatibility define for working with ugly msp430 specific parameter in UART API */
 #define BAUD2UBR(b) b
 
-#define LEDS_CONF_RED (1 << 15)
-#define LEDS_CONF_GREEN (1 << 13)
+#define LEDS_CONF_RED    (1 << 15)
+#define LEDS_CONF_GREEN  (1 << 13)
 #define LEDS_CONF_YELLOW (1 << 14)
 
 /* Select UART modules to be claimed by the UART driver (dev/uart.c) below: */
@@ -110,17 +110,41 @@ typedef uint32_t rtimer_clock_t;
 #endif /* NETSTACK_CONF_NETWORK */
 
 #ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     csma_driver
+#define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
+#ifndef CONTIKIMAC
 #ifndef NETSTACK_CONF_RDC
-/* #define NETSTACK_CONF_RDC     contikimac_driver */
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RDC           nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
+#define RF230_CONF_AUTOACK          0
+#define RF230_CONF_AUTORETRIES      3
+#else
+#ifndef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC         contikimac_driver
+#endif /* NETSTACK_CONF_RDC */
+// TODO(henrik) Check parameters to CONTIKIMAC
+/* TX routine passes the cca/ack result in the return parameter */
+#define RDC_CONF_HARDWARE_ACK     1
+/* TX routine does automatic cca and optional backoffs */
+#define RDC_CONF_HARDWARE_CSMA    1
+#define RF230_CONF_AUTOACK        1
+#define RF230_CONF_FRAME_RETRIES  1
+#define RF230_CONF_CSMA_RETRIES   0
+#define RF230_CONF_AUTORETRIES      1
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
 
-#ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
-#endif /* NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE */
+// 0.4 ms on Mulle (rf212)
+#define CONTIKIMAC_CONF_CCA_CHECK_TIME RTIMER_ARCH_SECOND/2000
+// Time to send 2 packets (tl) + one wait between packets (Ti)
+#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED RTIMER_ARCH_SECOND / 9
+// Ti 4 ms
+#define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL RTIMER_ARCH_SECOND / 250
+// Td = 2 ms
+#define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME / 500
+// Tc
+#define CONTIKIMAC_CONF_CCA_SLEEP_TIME RTIMER_ARCH_SECOND/125
+#endif /* CONTIKIMAC */
 
 #ifndef NETSTACK_CONF_FRAMER
 #if NETSTACK_CONF_WITH_IPV6
@@ -133,7 +157,6 @@ typedef uint32_t rtimer_clock_t;
 #ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO         rf230_driver
 #endif /* NETSTACK_CONF_RADIO */
-
 
 #define SICSLOWPAN_CONF_MAXAGE      1
 #define RF230_CONF_RX_BUFFERS       10
