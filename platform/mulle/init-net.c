@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, University of Colombo School of Computing
+ * Copyright (c) 2014-2015 Eistec AB.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,32 +10,32 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
+ * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
- * This file is part of the Contiki operating system.
+ * This file is part of the Mulle platform port of the Contiki operating system.
  *
- * @(#)$$
  */
 
 /**
  * \file
- *         Network initialization for the MICAz port.
+ *         Network initialization for the Mulle platform
  * \author
- *         Kasun Hewage <kasun.ch@gmail.com>
+ *         Henrik Mäkitaavola <henrik.makitaavola@gmail.com>
+ *         Joakim Gebart <joakim.gebart@eistec.se
  */
 
 #include <stdio.h>
@@ -59,7 +59,6 @@
 #include "net/ipv6/uip-ds6.h"
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 
-#define UIP_OVER_MESH_CHANNEL 8
 #ifndef NODE_ID
 #define NODE_ID 1
 #warning Node id = 1
@@ -101,7 +100,7 @@ init_net(void)
   id[6] = ((SIM->UIDML) >> (8 * 2)) & 0xFF;
   id[7] = ((SIM->UIDML) >> (8 * 3)) & 0xFF;
 #else
-  /* Use fixt address for border router. */
+  /* Use fixed address for border router. */
   id[0] = 0x02;
   id[7] = 0x01;
 #endif
@@ -166,11 +165,4 @@ init_net(void)
   rf230_init();
   rf230_driver.off();
 #endif /* NETSTACK_CONF_WITH_IPV6 */
-}
-/*---------------------------------------------------------------------------*/
-
-unsigned char *
-init_net_get_addr()
-{
-  return id;
 }
