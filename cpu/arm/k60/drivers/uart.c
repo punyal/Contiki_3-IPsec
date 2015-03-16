@@ -121,7 +121,7 @@ static inline void rx_irq_handler(const unsigned int uart_num) {
       receiving[uart_num] = 1;
     }
     /* Clear RX wake-up flag by writing a 1 to it */
-    uart_dev->S2 |= UART_S2_RXEDGIF_MASK;
+    uart_dev->S2 = UART_S2_RXEDGIF_MASK;
   }
 }
 
