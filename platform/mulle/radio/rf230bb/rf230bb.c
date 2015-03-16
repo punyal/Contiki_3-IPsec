@@ -1478,13 +1478,14 @@ rf230_cca(void)
   /* Start the CCA, wait till done, return result */
   /* Note reading the TRX_STATUS register clears both CCA_STATUS and CCA_DONE bits */
   { /* uint8_t volatile saved_sreg = SREG; / * TODO: K60 * / */
-    cli();
+    MK60_ENTER_CRITICAL_REGION();
     rf230_waitidle();
     hal_subregister_write(SR_CCA_REQUEST, 1);
     delay_us(TIME_CCA);
     while((cca & 0x80) == 0) {
       cca = hal_register_read(RG_TRX_STATUS);
     }
+    MK60_LEAVE_CRITICAL_REGION();
     /* SREG=saved_sreg; / * TODO: K60 * / */
   }
   ENERGEST_OFF(ENERGEST_TYPE_LED_YELLOW);
