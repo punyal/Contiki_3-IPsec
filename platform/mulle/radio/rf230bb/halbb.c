@@ -196,7 +196,7 @@ hal_init(void)
   PTE->PDDR |= 0x0040; /* Setup PTE6 (Sleep) as output */
 
   SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
-  PORTB->PCR[9] |= 0x00090100;       /* Set PTB9 (IRQ)    as GPIO with active high interrupt */
+  PORTB->PCR[9] |= 0x000c0100;       /* Set PTB9 (IRQ) as GPIO with active high interrupt */
 
   /* Enable power switch to radio */
   hal_set_pwr_high();
