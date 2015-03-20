@@ -136,92 +136,12 @@ volatile extern signed char rf230_last_rssi;
 /* static hal_trx_end_isr_event_handler_t trx_end_callback; */
 
 /*============================ IMPLEMENTATION ================================*/
-#if 0 /* defined(__AVR_ATmega128RFA1__) */
-/* #include <avr/io.h> */
-#include <avr/interrupt.h>
-/* AVR1281 with internal RF231 radio */
-#define HAL_SPI_TRANSFER_OPEN()
-/* #define HAL_SPI_TRANSFER_WRITE(to_write) (SPDR = (to_write)) */
-#define HAL_SPI_TRANSFER_WAIT()
-#define HAL_SPI_TRANSFER_READ() (SPDR)
-#define HAL_SPI_TRANSFER_CLOSE()
-#if 0
-#define HAL_SPI_TRANSFER(to_write) ( \
-    HAL_SPI_TRANSFER_WRITE(to_write), \
-    HAL_SPI_TRANSFER_WAIT(), \
-    HAL_SPI_TRANSFER_READ())
-#endif
-#elif defined(__AVR__)
-/*
- * AVR with hardware SPI tranfers (TODO: move to hw spi hal for avr cpu)
- */
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
-#define HAL_SPI_TRANSFER_OPEN() { \
-    HAL_ENTER_CRITICAL_REGION(); \
-    HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
-#define HAL_SPI_TRANSFER_WRITE(to_write) (SPDR = (to_write))
-#define HAL_SPI_TRANSFER_WAIT() ({ while((SPSR & (1 << SPIF)) == 0) {; } }) /* gcc extension, alternative inline function */
-#define HAL_SPI_TRANSFER_READ() (SPDR)
-#define HAL_SPI_TRANSFER_CLOSE() \
-  HAL_SS_HIGH();   /* End the transaction by pulling the Slave Select High. */ \
-  HAL_LEAVE_CRITICAL_REGION(); \
-  }
-#define HAL_SPI_TRANSFER(to_write) ( \
-    HAL_SPI_TRANSFER_WRITE(to_write), \
-    HAL_SPI_TRANSFER_WAIT(), \
-    HAL_SPI_TRANSFER_READ())
-#endif
-#if 0
-/*
- * Other SPI architecture (parts to core, parts to m16c6Xp
- */
-#include "contiki-mulle.h" /* MULLE_ENTER_CRITICAL_REGION */
-
-/* Software SPI transfers */
-#define HAL_SPI_TRANSFER_OPEN() { uint8_t spiTemp; \
-                                  HAL_ENTER_CRITICAL_REGION(); \
-                                  HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
-#define HAL_SPI_TRANSFER_WRITE(to_write) (spiTemp = spiWrite(to_write))
-#define HAL_SPI_TRANSFER_WAIT()  ({ 0; })
-#define HAL_SPI_TRANSFER_READ() (spiTemp)
-#define HAL_SPI_TRANSFER_CLOSE() \
-  HAL_SS_HIGH();   /* End the transaction by pulling the Slave Select High. */ \
-  HAL_LEAVE_CRITICAL_REGION(); \
-  }
-#define HAL_SPI_TRANSFER(to_write) (spiTemp = spiWrite(to_write))
-
-inline uint8_t
-spiWrite(uint8_t byte)
-{
-  uint8_t data = 0;
-  uint8_t mask = 0x80;
-  do {
-    if((byte & mask) != 0) {
-      HAL_PORT_MOSI |= (1 << HAL_MOSI_PIN);       /* call MOSI.set(); */
-    } else {
-      HAL_PORT_MOSI &= ~(1 << HAL_MOSI_PIN);       /* call MOSI.clr(); */
-    }
-    if((HAL_PORT_MISO & (1 << HAL_MISO_PIN)) > 0) {    /* call MISO.get() ) */
-      data |= mask;
-    }
-
-    HAL_PORT_SCK &= ~(1 << HAL_SCK_PIN);     /* call SCLK.clr(); */
-    HAL_PORT_SCK |= (1 << HAL_SCK_PIN);     /* call SCLK.set(); */
-  } while((mask >>= 1) != 0);
-  return data;
-}
-#endif /* !__AVR__ */
-
-/* #include "MK60DZ10.h" */
 
 /* K60: TODO */
+/* XXX: Refactor macros */
 #define HAL_SPI_TRANSFER_OPEN() HAL_ENTER_CRITICAL_REGION();
-/* #define HAL_SPI_TRANSFER_WRITE(data) */
-/* #define HAL_SPI_TRANSFER_WAIT() */
-/* #define HAL_SPI_TRANSFER_READ() */
 #define HAL_SPI_TRANSFER_CLOSE() HAL_LEAVE_CRITICAL_REGION();
+
 #include "K60.h"
 #include "llwu.h"
 
@@ -258,11 +178,8 @@ hal_spi_receive(int cont)
   SPI0->SR |= SPI_SR_TCF_MASK;
   return 0xFF & SPI0->POPR;
 }
-#ifdef MULLE_IRQ_PATCH
-#define HAL_RF230_ISR() void __attribute__((interrupt))  _isr_portc_pin_detect(void)
-#else
-#define HAL_RF230_ISR() void __attribute__((interrupt))  _isr_portb_pin_detect(void)
-#endif
+
+#define HAL_RF230_ISR() void _isr_portb_pin_detect(void)
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
@@ -272,40 +189,19 @@ hal_init(void)
   /*** IO Specific Initialization.****/
 
   /* Enable PORTC clock gate */
-  SIM->SCGC5 |= SIM_SCGC5_PORTD_MASK;
   SIM->SCGC5 |= SIM_SCGC5_PORTE_MASK;
 
   PORTE->PCR[6] |= 0x0100;     /* Sleep */
-  PORTD->PCR[7] |= 0x0100;           /* Vp */
 
   PTE->PDDR |= 0x0040; /* Setup PTE6 (Sleep) as output */
-  PTD->PDDR |= 0x0080; /* Setup PTD7 (Vp) as output */
 
-#ifdef MULLE_IRQ_PATCH
-  SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;
-  PORTC->PCR[1] |= 0x00090100;
-  llwu_enable_wakeup_source(LLWU_WAKEUP_SOURCE_P6_RISING);
-#else
   SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
-  PORTB->PCR[9] |= 0x00090100;       /* Set PTB9 (IRQ)    as GPIO with active high interrupt */
-#endif
+  PORTB->PCR[9] |= 0x000c0100;       /* Set PTB9 (IRQ) as GPIO with active high interrupt */
+
   /* Enable power switch to radio */
   hal_set_pwr_high();
 
-  /*** SPI Specific Initialization.****/
-
-  /* Mux SPI0 on port B */
-  PORTD->PCR[4] |= 0x0200; /* SPI0_PCS1 */
-  PORTD->PCR[2] |= 0x0200; /* SPI0_MOSI */
-  PORTD->PCR[1] |= 0x0200; /* SPI0_SCLK */
-  PORTD->PCR[3] |= 0x0200; /* SPI0_MISO */
-
-  /* Enable clock gate for SPI0 module */
-  SIM->SCGC6 |= SIM_SCGC6_SPI0_MASK;
-
-  /* Configure SPI1 */
-  SPI0->MCR = 0x803F3000;
-  SPI0->CTAR[0] = 0x38002224; /* TODO: Should be able to speed up */
+  /* Platform specific SPI is initialized in spi-config.c */
 
   /*** Enable interrupts from the radio transceiver. ***/
   hal_enable_trx_interrupt();
@@ -463,58 +359,6 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
   }
 
   HAL_LEAVE_CRITICAL_REGION();
-#if 0
-  uint8_t frame_length, *rx_data;
-
-  /*Send frame read (long mode) command.*/
-  HAL_SPI_TRANSFER_OPEN();
-  HAL_SPI_TRANSFER(0x20);
-
-  /*Read frame length. This includes the checksum. */
-  frame_length = HAL_SPI_TRANSFER(0);
-
-  /*Check for correct frame length. Bypassing this test can result in a buffer overrun! */
-  if((frame_length < HAL_MIN_FRAME_LENGTH) || (frame_length > HAL_MAX_FRAME_LENGTH)) {
-    /* Length test failed */
-    rx_frame->length = 0;
-    rx_frame->lqi = 0;
-    rx_frame->crc = false;
-  } else {
-    rx_data = (rx_frame->data);
-    rx_frame->length = frame_length;
-
-    /*Transfer frame buffer to RAM buffer */
-
-    HAL_SPI_TRANSFER_WRITE(0);
-    HAL_SPI_TRANSFER_WAIT();
-    do {
-      *rx_data++ = HAL_SPI_TRANSFER_READ();
-      HAL_SPI_TRANSFER_WRITE(0);
-
-      /* CRC was checked in hardware, but redoing the checksum here ensures the rx buffer
-       * is not being overwritten by the next packet. Since that lengthy computation makes
-       * such overwrites more likely, we skip it and hope for the best.
-       * Without the check a full buffer is read in 320us at 2x spi clocking.
-       * The 802.15.4 standard requires 640us after a greater than 18 byte frame.
-       * With a low interrupt latency overwrites should never occur.
-       */
-      /*          crc = _crc_ccitt_update(crc, tempData); */
-
-      HAL_SPI_TRANSFER_WAIT();
-    } while(--frame_length > 0);
-
-    /*Read LQI value for this frame.*/
-    rx_frame->lqi = HAL_SPI_TRANSFER_READ();
-
-    /* If crc was calculated set crc field in hal_rx_frame_t accordingly.
-     * Else show the crc has passed the hardware check.
-     */
-    rx_frame->crc = true;
-  }
-
-  HAL_SPI_TRANSFER_CLOSE();
-
-#endif /* defined(__AVR_ATmega128RFA1__) */
 }
 /*----------------------------------------------------------------------------*/
 /** \brief  This function will download a frame to the radio transceiver's frame
@@ -596,13 +440,8 @@ HAL_RF230_ISR()
   uint8_t interrupt_source;   /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
 
   /* Clear Interrupt Status Flag */
-#ifdef MULLE_IRQ_PATCH
-  PORTC->PCR[1] |= 0x01000000;    /* Clear interrupt */
-  NVIC_ClearPendingIRQ(PORTC_IRQn);
-#else
-  PORTB->PCR[9] |= 0x01000000;    /* Clear interrupt */
+  BITBAND_REG(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1;    /* Clear interrupt */
   NVIC_ClearPendingIRQ(PORTB_IRQn);
-#endif
 
   INTERRUPTDEBUG(1);
 
@@ -616,7 +455,8 @@ HAL_RF230_ISR()
 #if !RF230_CONF_AUTOACK
     rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
 #endif
-  } else if(interrupt_source & HAL_TRX_END_MASK) {
+  }
+  if(interrupt_source & HAL_TRX_END_MASK) {
     INTERRUPTDEBUG(11);
 
     state = hal_subregister_read(SR_TRX_STATUS);
@@ -647,13 +487,17 @@ HAL_RF230_ISR()
     }
 #endif
     }
-  } else if(interrupt_source & HAL_TRX_UR_MASK) {
+  }
+  if(interrupt_source & HAL_TRX_UR_MASK) {
     INTERRUPTDEBUG(13);
-  } else if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
+  }
+  if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
     INTERRUPTDEBUG(14);
-  } else if(interrupt_source & HAL_PLL_LOCK_MASK) {
+  }
+  if(interrupt_source & HAL_PLL_LOCK_MASK) {
     INTERRUPTDEBUG(15);
-  } else if(interrupt_source & HAL_BAT_LOW_MASK) {
+  }
+  if(interrupt_source & HAL_BAT_LOW_MASK) {
     /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
     /*  will continously be asserted while the supply voltage is less than the */
     /*  user-defined voltage threshold. */
@@ -661,134 +505,9 @@ HAL_RF230_ISR()
     trx_isr_mask &= ~HAL_BAT_LOW_MASK;
     hal_register_write(RG_IRQ_MASK, trx_isr_mask);
     INTERRUPTDEBUG(16);
-  } else {
-    INTERRUPTDEBUG(99);
   }
 }
 
-#if 0
-/* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
-HAL_RF230_ISR()
-{
-  /*The following code reads the current system time. This is done by first
-     reading the hal_system_time and then adding the 16 LSB directly from the
-     hardware counter.
-   */
-/*    uint32_t isr_timestamp = hal_system_time; */
-/*    isr_timestamp <<= 16; */
-/*    isr_timestamp |= HAL_TICK_UPCNT(); */
-
-  volatile uint8_t state;
-  uint8_t interrupt_source;   /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
-
-  INTERRUPTDEBUG(1);
-
-  /* Using SPI bus from ISR is generally a bad idea... */
-  /* Note: all IRQ are not always automatically disabled when running in ISR */
-  HAL_SPI_TRANSFER_OPEN();
-
-  /*Read Interrupt source.*/
-  /*Send Register address and read register content.*/
-  HAL_SPI_TRANSFER_WRITE(0x80 | RG_IRQ_STATUS);
-
-  /* This is the second part of the convertion of system time to a 16 us time
-     base. The division is moved here so we can spend less time waiting for SPI
-     data.
-   */
-/*   isr_timestamp /= HAL_US_PER_SYMBOL; / * Divide so that we get time in 16us resolution. * / */
-/*   isr_timestamp &= HAL_SYMBOL_MASK; */
-
-  HAL_SPI_TRANSFER_WAIT();   /* AFTER possible interleaved processing */
-
-#if 0 /* dak */
-  interrupt_source = HAL_SPI_TRANSFER_READ();   /* The interrupt variable is used as a dummy read. */
-
-  interrupt_source = HAL_SPI_TRANSFER(interrupt_source);
-#else
-  interrupt_source = HAL_SPI_TRANSFER(0);
-#endif
-  HAL_SPI_TRANSFER_CLOSE();
-
-  /*Handle the incomming interrupt. Prioritized.*/
-  if((interrupt_source & HAL_RX_START_MASK)) {
-    INTERRUPTDEBUG(10);
-    /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
-#if !RF230_CONF_AUTOACK
-#if 0  /* 3-clock shift and add is faster on machines with no hardware multiply */
-       /* With -Os avr-gcc saves a byte by using the general routine for multiply by 3 */
-    rf230_last_rssi = hal_subregister_read(SR_RSSI);
-    rf230_last_rssi = (rf230_last_rssi << 1) + rf230_last_rssi;
-#else  /* Faster with 1-clock multiply. Raven and Jackdaw have 2-clock multiply so same speed while saving 2 bytes of program memory */
-    rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
-#endif
-#endif
-/*       if(rx_start_callback != NULL){ */
-/*            / * Read Frame length and call rx_start callback. * / */
-/*            HAL_SPI_TRANSFER_OPEN(); */
-/*            uint8_t frame_length = HAL_SPI_TRANSFER(0x20); */
-/*            frame_length = HAL_SPI_TRANSFER(frame_length); */
-
-/*            HAL_SPI_TRANSFER_CLOSE(); */
-
-/*            rx_start_callback(isr_timestamp, frame_length); */
-/*       } */
-  } else if(interrupt_source & HAL_TRX_END_MASK) {
-    INTERRUPTDEBUG(11);
-/*	   if(trx_end_callback != NULL){ */
-/*       trx_end_callback(isr_timestamp); */
-/*     } */
-
-    state = hal_subregister_read(SR_TRX_STATUS);
-    if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON)) {
-      /* Received packet interrupt */
-      /* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
-/*         if (rxframe.length) break;			//toss packet if last one not processed yet */
-      if(rxframe[rxframe_tail].length) {
-        INTERRUPTDEBUG(42);
-      } else { INTERRUPTDEBUG(12);
-      }
-
-#ifdef RF230_MIN_RX_POWER
-      /* Discard packets weaker than the minimum if defined. This is for testing miniature meshes.*/
-      /* Save the rssi for printing in the main loop */
-#if RF230_CONF_AUTOACK
-      /*       rf230_last_rssi=hal_subregister_read(SR_ED_LEVEL); */
-      rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);
-#endif
-      if(rf230_last_rssi >= RF230_MIN_RX_POWER) {
-#endif
-      hal_frame_read(&rxframe[rxframe_tail]);
-      rxframe_tail++;
-      if(rxframe_tail >= RF230_CONF_RX_BUFFERS) {
-        rxframe_tail = 0;
-      }
-      rf230_interrupt();
-/*       trx_end_callback(isr_timestamp); */
-#ifdef RF230_MIN_RX_POWER
-    }
-#endif
-    }
-  } else if(interrupt_source & HAL_TRX_UR_MASK) {
-    INTERRUPTDEBUG(13);
-  } else if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
-    INTERRUPTDEBUG(14);
-  } else if(interrupt_source & HAL_PLL_LOCK_MASK) {
-    INTERRUPTDEBUG(15);
-/*      hal_pll_lock_flag++; */
-  } else if(interrupt_source & HAL_BAT_LOW_MASK) {
-    /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
-    /*  will continously be asserted while the supply voltage is less than the */
-    /*  user-defined voltage threshold. */
-    uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
-    trx_isr_mask &= ~HAL_BAT_LOW_MASK;
-    hal_register_write(RG_IRQ_MASK, trx_isr_mask);
-/*      hal_bat_low_flag++; / * Increment BAT_LOW flag. * / */
-    INTERRUPTDEBUG(16);
-  } else {
-    INTERRUPTDEBUG(99);
-  }
-}
-#endif /* defined(__AVR_ATmega128RFA1__) */
 #endif /* defined(DOXYGEN) */
 
 /** @} */
