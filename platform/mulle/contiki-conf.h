@@ -163,8 +163,6 @@ typedef uint32_t rtimer_clock_t;
 
 #define SICSLOWPAN_CONF_MAXAGE      1
 #define RF230_CONF_RX_BUFFERS       10
-#define RF230_CONF_AUTOACK          0
-#define RF230_CONF_AUTORETRIES      3
 #define LINKADDR_CONF_SIZE          8
 
 #ifndef UIP_CONF_BUFFER_SIZE
