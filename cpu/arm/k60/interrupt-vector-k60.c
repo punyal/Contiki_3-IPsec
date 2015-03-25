@@ -151,7 +151,7 @@ void __stack_top(void);
 
 typedef void (*ISR_func)(void);
 
-const ISR_func isr_vector[111] ISR_VECTOR_SECTION =
+const ISR_func isr_vector[111] __attribute__((used)) ISR_VECTOR_SECTION =
 {
   /* ARM Cortex defined interrupt vectors */
   __stack_top,
@@ -294,7 +294,7 @@ unhandled_interrupt(void)
 static void
 dHardFault_handler(void)
 {
-  __asm volatile
+  __ASM volatile
   (
     "tst lr, #4\n"
     "ite eq\n"
@@ -302,7 +302,7 @@ dHardFault_handler(void)
     "mrsne r0, psp\n"
     "b hard_fault_handler_c\n"
   );
-  while(1);
+  __ASM volatile ("stuckloop%=:\nb stuckloop%=\n":::);
 }
 
 /**
