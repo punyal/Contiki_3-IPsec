@@ -82,12 +82,8 @@ extern void __libc_init_array(void);
 /* our local copy of newlib init */
 void call_init_array(void);
 
-/* Stack pointer will be set to _stack_start by the hardware at reset/power on */
-void
-reset_handler(void)
+void wdog_disable(void)
 {
-#if DISABLE_WDOG
-  /* Disable watchdog to allow single stepping through the startup code. */
   /*
    * The following unlock sequence must be completed within 256 bus cycles or
    * the watchdog will reset the system. The watchdog is enabled by default at
@@ -108,18 +104,27 @@ reset_handler(void)
   WDOG->UNLOCK = 0xC520;
   WDOG->UNLOCK = 0xD928;
   WDOG->STCTRLH &= ~WDOG_STCTRLH_WDOGEN_MASK;
+}
 
+/* Stack pointer will be set to _stack_start by the hardware at reset/power on */
+void
+reset_handler(void)
+{
+#if DISABLE_WDOG
+  /* Disable watchdog to allow single stepping through the startup code. */
+  __ASM volatile ("bl wdog_disable\n");
   /*
    * The line below this comment is the earliest possible location for a
    * breakpoint when debugging the startup code.
    */
 #endif /* DISABLE_WDOG */
 
-  call_init_array(); /* or __libc_init_array() as provided by newlib or other libc */
+  __ASM volatile ("bl call_init_array\n");
+  /* or __libc_init_array() as provided by newlib or other libc */
 
-  main();
+  __ASM volatile ("bl main\n");
   /* main should never return, but just in case... */
-  while(1);
+  __ASM volatile ("aftermain%=:\nb aftermain%=\n":::);
 }
 /* Initialize static C++ objects etc. */
 
