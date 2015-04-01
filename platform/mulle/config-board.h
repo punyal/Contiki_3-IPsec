@@ -167,7 +167,7 @@ extern "C" {
  *
  * Note: Make sure this channel is not used elsewhere (asynchronously).
  */
-#define BOARD_DELAY_PIT_CHANNEL 0
+#define BOARD_DELAY_PIT_CHANNEL 1
 
 #define PIT_ISR_GLUE2(CHANNEL) (_isr_pit ## CHANNEL)
 #define PIT_ISR_GLUE(CHANNEL) PIT_ISR_GLUE2(CHANNEL)
