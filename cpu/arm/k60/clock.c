@@ -186,4 +186,7 @@ void BOARD_DELAY_PIT_ISR(void) {
 
   /* Clear flag set by clock_delay_usec() */
   waiting_flag = 0;
+
+  /* Disable interrupts */
+  BITBAND_REG(PIT->CHANNEL[BOARD_DELAY_PIT_CHANNEL].TCTRL, PIT_TCTRL_TIE_SHIFT) = 0;
 }
