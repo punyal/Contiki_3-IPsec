@@ -208,7 +208,18 @@ spi_hw_init_master(const spi_bus_t spi_num) {
 
   /* Enable interrupts for TCF flag */
   BITBAND_REG(SPI[spi_num]->RSER, SPI_RSER_TCF_RE_SHIFT) = 1;
-  NVIC_EnableIRQ(SPI0_IRQn);
+
+  switch(spi_num) {
+    case SPI_0:
+      NVIC_EnableIRQ(SPI0_IRQn);
+      break;
+    case SPI_1:
+      NVIC_EnableIRQ(SPI1_IRQn);
+      break;
+    case SPI_2:
+      NVIC_EnableIRQ(SPI2_IRQn);
+      break;
+  }
 
   /* disable clock gate */
   spi_stop(spi_num);
