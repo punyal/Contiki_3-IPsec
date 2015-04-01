@@ -4,18 +4,18 @@
 
 /*
  * Onboard devices connected:
- *  AT86RF212: max sck frequency 7.5 MHz (async) 8000000 (sync), CPOL = 0, CPHA = 0, but seems to work with CPOL=1, CPHA=1 as well.
+ *  AT86RF212B: max sck frequency 7.5 MHz (async) 8000000 (sync), CPOL = 0, CPHA = 0, but seems to work with CPOL=1, CPHA=1 as well.
  *  LIS3DH: max sck frequency 10 MHz, CPOL = 1, CPHA = 1
  *  M25P16: max sck frequency 25 MHz, (CPOL=0, CPHA=0) or (CPOL=1, CPHA=1)
  *  FM25L04B: max sck frequency 20 MHz, (CPOL=0, CPHA=0) or (CPOL=1, CPHA=1)
  *
- * The AT86RF212 is allocated to CTAR0, the rest at CTAR1.
+ * The AT86RF212B is allocated to CTAR0, the rest at CTAR1.
  * FIXME: The memories could be driven faster.
  */
 
 #include "spi-k60.h"
 
-/* For AT86RF212 we need some extra delays for the tASC, tCSC, tDT times. */
+/* For AT86RF212B we need some extra delays for the tASC, tCSC, tDT times. */
 /* CS signal deassertion to assertion delay, t8, tDT > 250 ns => 12 DT divider at 48 MHz bus */
 /* CS signal assertion to SCK delay, t1, tCSC > 180 ns => 8.64 CSC divider at 48 MHz bus */
 /* last SCK rising edge to CS signal deassertion, t9, (tASC + (1/BR)/2) > 250 ns => tASC > 183 ns => 8.8 ASC divider at 48 MHz bus */
@@ -23,7 +23,7 @@
 
 static const spi_config_t spi0_conf[NUM_CTAR] = {
   {
-    .sck_freq =  7500000, /* 7.5 MHz max bus frequency according to AT86RF212 data sheet. */
+    .sck_freq =  7500000, /* 7.5 MHz max bus frequency according to AT86RF212B data sheet. */
     .frame_size = 8,
     .cpol = 0,
     .cpha = 0,
@@ -72,11 +72,11 @@ board_spi_init(void)
   int i;
   port_init_spi0();
   /* SPI0 is used for onboard peripherals */
-  spi_hw_init_master(0);
-  spi_start(0);
+  spi_hw_init_master(SPI_0);
+  spi_start(SPI_0);
   for (i = 0; i < NUM_CTAR; ++i) {
-    spi_set_params(0, i, &spi0_conf[i]);
+    spi_set_params(SPI_0, i, &spi0_conf[i]);
   }
-  spi_stop(0);
+  spi_stop(SPI_0);
 }
 

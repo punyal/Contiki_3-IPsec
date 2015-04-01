@@ -208,7 +208,18 @@ spi_hw_init_master(const spi_bus_t spi_num) {
 
   /* Enable interrupts for TCF flag */
   BITBAND_REG(SPI[spi_num]->RSER, SPI_RSER_TCF_RE_SHIFT) = 1;
-  NVIC_EnableIRQ(SPI0_IRQn);
+
+  switch(spi_num) {
+    case SPI_0:
+      NVIC_EnableIRQ(SPI0_IRQn);
+      break;
+    case SPI_1:
+      NVIC_EnableIRQ(SPI1_IRQn);
+      break;
+    case SPI_2:
+      NVIC_EnableIRQ(SPI2_IRQn);
+      break;
+  }
 
   /* disable clock gate */
   spi_stop(spi_num);
@@ -388,13 +399,13 @@ void spi_start(const spi_bus_t spi_num)
 {
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
-    case 0:
+    case SPI_0:
       BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 1;
       break;
-    case 1:
+    case SPI_1:
       BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 1;
       break;
-    case 2:
+    case SPI_2:
       BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 1;
       break;
   }
@@ -404,13 +415,13 @@ void spi_stop(const spi_bus_t spi_num)
 {
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
-    case 0:
+    case SPI_0:
       BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 0;
       break;
-    case 1:
+    case SPI_1:
       BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 0;
       break;
-    case 2:
+    case SPI_2:
       BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 0;
       break;
   }
