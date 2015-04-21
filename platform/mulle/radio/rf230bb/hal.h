@@ -96,6 +96,7 @@ extern "C" {
 #define HAL_SS_LOW()   /* Done in HW on K60 */
 
 #define HAL_ENABLE_RADIO_INTERRUPT() { PORTB->PCR[9] |= (1 << 24); \
+  BITBAND_REG(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1; \
   NVIC_ClearPendingIRQ(PORTB_IRQn); \
   NVIC_EnableIRQ(PORTB_IRQn); }
 #define HAL_DISABLE_RADIO_INTERRUPT() (NVIC_DisableIRQ(PORTB_IRQn))

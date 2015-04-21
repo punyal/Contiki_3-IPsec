@@ -462,7 +462,17 @@ radio_set_trx_state(uint8_t new_state)
     /* When the PLL is active most states can be reached in 1us. However, from */
     /* TRX_OFF the PLL needs time to activate. */
     if(original_state == TRX_OFF) {
+#ifdef IRQ_POLLING
+      hal_disable_trx_interrupt();
+      hal_set_slptr_low();
+      while(!NVIC_GetPendingIRQ(PORTB_IRQn));
+      hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+      //printf("ir %X\n", hal_register_read(RG_IRQ_STATUS));
+      //delay_us(2 * TIME_SLEEP_TO_TRX_OFF);
+      hal_enable_trx_interrupt();
+#else
       delay_us(TIME_TRX_OFF_TO_PLL_ACTIVE);
+#endif
     } else {
       delay_us(TIME_STATE_TRANSITION_PLL_ACTIVE);
     }
@@ -526,8 +536,16 @@ on(void)
      * radio IRQ pin on Mulle. (Platform board errata)
      */
     LLWU_INHIBIT_LLS();
+#ifdef IRQ_POLLING
+    hal_disable_trx_interrupt();
+    hal_set_slptr_low();
+    while(!NVIC_GetPendingIRQ(PORTB_IRQn));
+    hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+    hal_enable_trx_interrupt();
+#else
     hal_set_slptr_low();
     delay_us(2 * TIME_SLEEP_TO_TRX_OFF);
+#endif
 /*  delay_us(TIME_SLEEP_TO_TRX_OFF+TIME_SLEEP_TO_TRX_OFF/2); */
 /*  SREG=sreg; */
   }
@@ -666,7 +684,11 @@ rf230_init(void)
 void
 rf230_warm_reset(void)
 {
+#ifdef IRQ_POLLING
+  hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK|0x10|0x1);
+#else
   hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK);
+#endif
 
   /* Set up number of automatic retries 0-15 (0 implies PLL_ON sends instead of the extended TX_ARET mode */
   hal_subregister_write(SR_MAX_FRAME_RETRIES, RF230_CONF_AUTORETRIES);
@@ -1480,11 +1502,21 @@ rf230_cca(void)
   { /* uint8_t volatile saved_sreg = SREG; / * TODO: K60 * / */
     MK60_ENTER_CRITICAL_REGION();
     rf230_waitidle();
+#ifdef IRQ_POLLING
+    hal_disable_trx_interrupt();
+    hal_subregister_write(SR_CCA_REQUEST, 1);
+    while(!NVIC_GetPendingIRQ(PORTB_IRQn));
+    hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+    //printf("ir %X\n", hal_register_read(RG_IRQ_STATUS));
+    //delay_us(2 * TIME_SLEEP_TO_TRX_OFF);
+    hal_enable_trx_interrupt();
+#else
     hal_subregister_write(SR_CCA_REQUEST, 1);
     delay_us(TIME_CCA);
     while((cca & 0x80) == 0) {
       cca = hal_register_read(RG_TRX_STATUS);
     }
+#endif
     MK60_LEAVE_CRITICAL_REGION();
     /* SREG=saved_sreg; / * TODO: K60 * / */
   }
