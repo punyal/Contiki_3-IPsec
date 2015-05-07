@@ -146,36 +146,39 @@ extern "C" {
  * @name SLIP configuration
  */
 /** @{ */
+#ifndef BOARD_SLIP_UART_NUM
+/**
+ * UART module used for SLIP communications.
+ */
+#define BOARD_SLIP_UART_NUM 1
+#endif
+
+#if BOARD_SLIP_UART_NUM == 0
 /**
  * UART module used for SLIP communications.
  *
  * This string is passed to open() during slip_init_arch().
  * This is usually the module name within double-quotes e.g. "UART0"
  */
-#define BOARD_SLIP_UART_NAME "UART1"
+#define BOARD_SLIP_UART_NAME "UART0"
 
 /**
- * UART module used for SLIP communications.
+ * @brief PORT module used for SLIP UART TX pin
  */
-#define BOARD_SLIP_UART_NUM 1
-
+#define BOARD_SLIP_TX_PORT PORTA
 /**
- * PORT module used for SLIP UART TX pin
+ * @brief PORT module used for SLIP UART RX pin
  */
-#define BOARD_SLIP_TX_PORT PORTC
-/**
- * PORT module used for SLIP UART RX pin
- */
-#define BOARD_SLIP_RX_PORT PORTC
+#define BOARD_SLIP_RX_PORT PORTA
 
 /**
  * @brief SLIP UART TX pin
  */
-#define BOARD_SLIP_TX_PIN 4
+#define BOARD_SLIP_TX_PIN 14
 /**
  * @brief SLIP UART RX pin
  */
-#define BOARD_SLIP_RX_PIN 3
+#define BOARD_SLIP_RX_PIN 15
 
 /**
  * @brief SLIP UART TX pin alternate function number
@@ -185,6 +188,18 @@ extern "C" {
  * @brief SLIP UART RX pin alternate function number
  */
 #define BOARD_SLIP_RX_AF 3
+
+#elif BOARD_SLIP_UART_NUM == 1
+
+#define BOARD_SLIP_UART_NAME "UART1"
+#define BOARD_SLIP_TX_PORT PORTC
+#define BOARD_SLIP_RX_PORT PORTC
+#define BOARD_SLIP_TX_PIN 3
+#define BOARD_SLIP_RX_PIN 4
+#define BOARD_SLIP_TX_AF 3
+#define BOARD_SLIP_RX_AF 3
+
+#endif /* BOARD_SLIP_UART_NUM */
 
 /** @} */
 
