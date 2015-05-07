@@ -142,7 +142,10 @@ extern "C" {
  */
 #define NUM_SPI 3
 
-
+/**
+ * @name SLIP configuration
+ */
+/** @{ */
 /**
  * UART module used for SLIP communications.
  *
@@ -155,6 +158,35 @@ extern "C" {
  * UART module used for SLIP communications.
  */
 #define BOARD_SLIP_UART_NUM 1
+
+/**
+ * PORT module used for SLIP UART TX pin
+ */
+#define BOARD_SLIP_TX_PORT PORTC
+/**
+ * PORT module used for SLIP UART RX pin
+ */
+#define BOARD_SLIP_RX_PORT PORTC
+
+/**
+ * @brief SLIP UART TX pin
+ */
+#define BOARD_SLIP_TX_PIN 4
+/**
+ * @brief SLIP UART RX pin
+ */
+#define BOARD_SLIP_RX_PIN 3
+
+/**
+ * @brief SLIP UART TX pin alternate function number
+ */
+#define BOARD_SLIP_TX_AF 3
+/**
+ * @brief SLIP UART RX pin alternate function number
+ */
+#define BOARD_SLIP_RX_AF 3
+
+/** @} */
 
 /**
  * RTC crystal load capacitance configuration bits.
