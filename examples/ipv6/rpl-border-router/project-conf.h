@@ -35,6 +35,8 @@
 #define WITH_SLIP 1
 #endif
 
+/* #define CONTIKIMAC 1 */
+
 #ifndef UIP_FALLBACK_INTERFACE
 #define UIP_FALLBACK_INTERFACE rpl_interface
 #endif
