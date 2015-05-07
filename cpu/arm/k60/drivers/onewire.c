@@ -66,8 +66,6 @@
 #define PRINTF(...)
 #endif
 
-
-
 /* Convenience macro, ONEWIRE_UART_NUM is defined by the platform. */
 #define ONEWIRE_UART UART[ONEWIRE_UART_NUM]
 
