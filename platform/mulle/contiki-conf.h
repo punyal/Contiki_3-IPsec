@@ -147,6 +147,9 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / 500)
 // Tc
 #define CONTIKIMAC_CONF_CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / 125)
+
+/* Phase optimization seem to cause problems (drifting clocks?) */
+#define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 #endif /* CONTIKIMAC */
 
 #ifndef NETSTACK_CONF_FRAMER
