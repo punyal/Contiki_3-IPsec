@@ -85,7 +85,7 @@ typedef uint32_t rtimer_clock_t;
 #define LEDS_CONF_YELLOW (1 << 14)
 
 /* Select UART modules to be claimed by the UART driver (dev/uart.c) below: */
-#define UART0_CONF_ENABLE 1
+#define UART0_CONF_ENABLE 0
 #define UART1_CONF_ENABLE 1
 #define UART2_CONF_ENABLE 0
 #define UART3_CONF_ENABLE 0
