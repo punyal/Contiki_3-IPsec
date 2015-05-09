@@ -219,10 +219,15 @@ void dw1000_init()
 	dw_port_init_spi();//need to check this port io initialization is correct
 	dw_interrupt_handler_registration();
 	spi_hw_init_master(SPI_1);//turn on the spi before setting the parameters
-	spi_set_params(SPI_1, DW100_CTAS, &spi1_conf[0]); //setup the spi parameters
-	
-  
-  
+	spi_start(SPI_1);
+	int i;
+	for (i = 0; i < 2; ++i) {
+		spi_set_params(SPI_1, i, &spi1_conf[i]); //setup the spi parameters
+	}
+	spi_stop(SPI_1);
+	spi_start(SPI_1);
+
+
 	dw1000.state = DW_STATE_INITIALIZING;
 
 	// Init required hardware components
@@ -1627,25 +1632,13 @@ void dw_spi_write_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_fl
 	while( n_bytes-- > 1)
 	{
 		//dw_spi_transfer_byte(*pData, DW_SPI_TRANSFER_CONT);
-		result = spi_transfer_blocking(   SPI_1, 
-					  DW100_CTAS,
-					  chipSel,
-					  (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT, 
-					  pData,
-                                          NULL,
-					  1, 0);
+		result = spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT, pData, NULL, 1, 0);
 		++pData;
 	}
 	
 	// Potentially end spi transaction
 	//dw_spi_transfer_byte(*pData, continue_transfer);
-	result = spi_transfer_blocking(   SPI_1, 
-					  DW100_CTAS,
-					  chipSel,
-					  (spi_transfer_flag_t) continue_transfer, 
-					  pData,
-					  NULL,
-					  1, 0);
+	result = spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) continue_transfer, pData, NULL, 1, 0);
 }
 
 
