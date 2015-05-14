@@ -71,9 +71,15 @@ void
 ds18b20_convert_temperature(const ow_rom_code_t id)
 {
   static const ds18b20_cmd_t cmd = DS18B20_CONVERT_TEMPERATURE;
+  uint8_t status = 0;
 
   ow_skip_or_match_rom(id);
   ow_write_bytes((const uint8_t *)&cmd, 1);
+  /* perform a read of the conversion status in order to make sure the write
+   * has finished before we leave this function. */
+  /* The sensor will ignore the command if STOP mode is entered before the UART
+   * has finished writing the 1-wire command. */
+  ow_read_bytes(&status, 1);
 }
 /**
  * Read the scratchpad of a DS18B20 sensor.
