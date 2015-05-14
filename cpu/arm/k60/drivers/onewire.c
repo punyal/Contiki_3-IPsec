@@ -170,7 +170,7 @@ ow_begin_next_byte(void)
  *       any preceding reads have completed.
  */
 
-void __attribute__((interrupt))
+void
 ONEWIRE_ISR_FUNC(void)
 {
   static volatile uint8_t data;
