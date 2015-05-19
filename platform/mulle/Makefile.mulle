@@ -17,6 +17,7 @@ CONTIKI_TARGET_DIRS += . dev
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
+BAUDRATE ?= 921600
 
 CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   devicemap.c \
@@ -166,7 +167,10 @@ DEBUGGER_FLAGS += \
 
 export DEBUGGER_FLAGS
 
-export TERMFLAGS += -b115200 "$(PORT)"
+# For serialdump
+#export TERMFLAGS += -b$(BAUDRATE) "$(PORT)"
+# For pyterm
+export TERMFLAGS += -p "$(PORT)" -b $(BAUDRATE)
 
 
 OPENOCD ?= openocd
@@ -174,13 +178,13 @@ export FLASHER ?= $(OPENOCD)
 export DEBUGGER ?= $(GDB)
 export DEBUGSERVER ?= $(OPENOCD)
 export RESET ?= $(OPENOCD)
-export TERMPROG ?= $(SERIALDUMP)
+export TERMPROG ?= $(PYTERM)
 
 
 # The CPU on the Mulle board does not have a floating point unit
 CFLAGS += -msoft-float -mfloat-abi=soft
 
-
+PYTERM = $(PLATFORM_DIR)/tools/pyterm/pyterm
 SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-linux
 
 login:
