@@ -11,20 +11,20 @@
  *  - *MISO     :* PE3 (Port E, pin 3)
  *  - *Chip sel.:* PE4 (Port E, pin 4)
  */
-void
-dw_spi_init(void)
-{
-	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-	PORTE_PCR1 |= 0x0200; /* mosi */
-	PORTE_PCR2 |= 0x0200; /* clock */
-	PORTE_PCR3 |= 0x0200; /* miso */
-	PORTE_PCR4 |= 0x0200; /* chip sel  */
-
-	SIM_SCGC6  |= SIM_SCGC6_SPI1_MASK; // Enable clock for spi1
-	SPI1_MCR    = 0x00000001;
-	SPI1_MCR    = 0x803F3000;
-	SPI1_CTAR0  = 0x38002224;
-}
+//void
+//dw_spi_init(void)
+//{
+////	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
+////	PORTE_PCR1 |= 0x0200; /* mosi */
+////	PORTE_PCR2 |= 0x0200; /* clock */
+////	PORTE_PCR3 |= 0x0200; /* miso */
+////	PORTE_PCR4 |= 0x0200; /* chip sel  */
+//
+////	SIM_SCGC6  |= SIM_SCGC6_SPI1_MASK; // Enable clock for spi1
+////	SPI1_MCR    = 0x00000001;
+////	SPI1_MCR    = 0x803F3000;
+////	SPI1_CTAR0  = 0x38002224;
+//}
 
 /**
  * \brief Write a single byte to the device. Completes only half the 
@@ -39,18 +39,6 @@ dw_spi_write_byte(uint8_t byte, dw_spi_transfer_flag_t continue_transfer)
 	const uint32_t chipSel = 0x1;
 	
 	uint32_t send = SPI_PUSHR_PCS(chipSel) | SPI_PUSHR_TXDATA(byte);
-	
-	
-	int result = spi_transfer_blocking(   SPI_1, 
-					      const uint8_t ctas, 
-					      chipSel,
-					      const spi_transfer_flag_t cont, 
-					      NULL,
-					      &byte, 
-					      0x01, 
-					      0x01)
-	
-	
 	
 	if (continue_transfer) { send |= SPI_PUSHR_CONT_MASK; }
 

@@ -16,7 +16,9 @@
 #include <stdio.h>
 #include <udelay.h>
 #include <math.h>
+#include <inttypes.h>
 #include "spi-k60.h"
+#include "contiki.h"
 
 /*===========================================================================*/
 /*================================ Defines ==================================*/
@@ -39,8 +41,137 @@ static void dw_trxoff();
 static void dw_init_rx();
 static void dw_init_tx();
 
+
+/*===========================================================================*/
+/*========================== Public Declarations ============================*/
+
+/**
+ * \brief Singleton instance of the dw1000 driver. This instance mirrors the
+ * configuration on the actual device. Also provides a global access point to
+ * device receive buffer data.
+ */
+dw1000_base_driver dw1000;
+
+
+/**
+ * \brief Generalisation for interrupt vector.
+ * \todo Should be private to platform-hal?
+ */
+void (* dw_hal_interrupt_handler)();
+/**
+ * \brief Host callback when interrupt detected.
+ * \todo Should be private to platform-hal?
+ */
+void (* dw_hal_interrupt_callback)();
+
+
+/**
+ *
+ * \brief Implementation of the Hardware Abstraction Layer for the mulle platform.
+ *
+ * \details The mulle implementation of the HAL covers:
+ * 	- Interrupts.
+ * 		One pin is used for interrupts. The PE5 (port E, pin 5) pin is used
+ * 		for interrupts and should be connected to GPIO8 of the dw1000.
+ *
+ * \note The mulle implementation assumes that contiki is available and exposes
+ * a specific callback, \ref dw_interrupt_callback_proc, for use in a contiki
+ * application. If contiki is not available the interrupt
+ *
+ * \todo Generalise the interrupt callback so that the system can be used with
+ * and without contiki. This could be done by introducing a contiki specific
+ * HAL implementation, something akin to mulle-contiki-hal.c.
+ *
+ * \todo Add to documention. Version of the mulle platform and corresponding arm processor.
+ */
+
+/**
+ * \brief Contiki process callback for interrupt handling.
+ */
+extern struct process dw_interrupt_callback_proc;
+
+/**
+ * \brief Arm cortex m4 interrupt vector for port E pins.
+ *
+ * \todo Takes over interrupt vector completely, can you mix-in the interrupt
+ * functionality?
+ */
+void _isr_gpio_e(void);
+
+/**
+ * \brief Internal interrupt callback.
+ *
+ * \note I actually don't remember why I separated the internal and external
+ * interface. Might only be that I thought it was a good idea to have the
+ * sparatation...
+ */
+static void _dw_hal_interrupt_callback(void);
+
+//void dw_hal_init(void)
+//{
+//	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
+//	PORTE_PCR5  = 0x00000100; // Function sel, alt 1, gpio
+//	PORTE_PCR5 |= 0x01000000; // Clear interrupt
+//	PORTE_PCR5 |= 0x00090000; // IRQ enable, on logic rising edge
+//	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
+//
+//	dw_hal_interrupt_handler  = _isr_gpio_e;
+//	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
+//}
+
+void dw_hal_enable_interrupt(void)
+{
+	PORTE->PCR[5] |= 1<<24;
+	NVIC->ICPR[2]  = 1<<27;
+	NVIC->ISER[2] |= 1<<27;
+}
+
+void dw_hal_disable_interrupt(void)
+{
+	NVIC->ICER[2] |= 1<<27;
+}
+
+void dw_hal_clear_pending_interrupt(void)
+{
+	PORTE->PCR[5] |= (1<<24);
+	NVIC->ICPR[2] = 1<<27;
+}
+
+static void _dw_hal_interrupt_callback(void)
+{
+	process_poll(&dw_interrupt_callback_proc);
+}
+
+/* Interrupt handler */
+void _isr_gpio_e(void)
+{
+	dw_hal_disable_interrupt();
+
+	// Clear interrupt status
+	dw_hal_clear_pending_interrupt();
+
+	// Put handling on queue
+	dw_hal_interrupt_callback();
+
+	// Enable interrupt again!
+	dw_hal_enable_interrupt();
+}
+
+
+
+
 /*===========================================================================*/
 /*============================= Configuration ===============================*/
+
+/**
+ * \brief SPI configuration for the DW1000.
+ */
+static const spi_config_t spi1_conf[NUM_CTAR] = {
+  { .sck_freq = 3000000, .frame_size = 7, .cpol = 0, .cpha = 0},
+  { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
+  };
+
+
 
 /**
  * \brief Initialise Port configuration for the DW1000.
@@ -64,14 +195,14 @@ static void dw_interrupt_handler_registration(void) {
 	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
 }
 
+static const uint32_t chipSel = 0x1;
+
 /**
  * \brief Initialise the DW1000.
  */
-void dw_init()
+void dw1000_init()
 {
   
-	spi_config_t config ;
-	
 	//SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
 	//PORTE_PCR1 |= 0x0200; /* mosi */
 	//PORTE_PCR2 |= 0x0200; /* clock */
@@ -83,16 +214,13 @@ void dw_init()
 	//SPI1_MCR    = 0x803F3000;
 	//SPI1_CTAR0  = 0x38002224;
 
-	config->cpha = 0;
-	config->cpol = 0;
-	config->frame_size = 0x07;//The number of bits transferred per frame is equal to the FMSZ field value plus 1. The minimum valid	FMSZ field value is 3.
-	config->sck_freq = 3000000;
-
+	printf( "Decawave Initialising begin\n");
 
 	dw_port_init_spi();//need to check this port io initialization is correct
 	dw_interrupt_handler_registration();
-	spi_set_params(SPI_1, DW100_CTAS, &config); //setup the spi parameters
-	spi_hw_init_master(SPI_1);
+	spi_hw_init_master(SPI_1);//turn on the spi before setting the parameters
+	spi_set_params(SPI_1, DW100_CTAS, &spi1_conf[0]); //setup the spi parameters
+	
   
   
 	dw1000.state = DW_STATE_INITIALIZING;
@@ -143,7 +271,7 @@ void dw_init()
 	dw_conf( &dw1000.conf );
 
 	// Print information about the board
-	printf( "Initialising device: %llu\n", dw_get_device_id() );
+	printf( "Initialising device: %lu\n", dw_get_device_id() );
 
 	dw1000.state = DW_STATE_IDLE;
 }
@@ -507,25 +635,25 @@ void dw_conf_print()
 	printf("============================\n");
 	printf("DW1000 Current Configuration\n");
 	printf("============================\n");
-	printf("Device id   : %llx\n", dw_get_device_id());
-	printf("sys_status  : %llx\n", dw_read_reg_64(DW_REG_SYS_STATUS, DW_LEN_SYS_STATUS));
+	printf("Device id   : %08" PRIx32 "\n", dw_get_device_id());
+	printf("sys_status  : %016" PRIx64 "\n", dw_read_reg_64(DW_REG_SYS_STATUS, DW_LEN_SYS_STATUS));
 	printf("============================\n");
-	printf( "sys_cfg    : %x\n", sys_cfg_val    );
-	printf( "tx_fctrl   : %x\n", tx_fctrl_val   );
-	printf( "chan_ctrl  : %x\n", chan_ctrl_val  );
-	printf( "agc_tune1  : %x\n", agc_tune1_val  );
-	printf( "agc_tune2  : %x\n", agc_tune2_val  );
-	printf( "agc_tune3  : %x\n", agc_tune3_val  );
-	printf( "drx_tune0b : %x\n", drx_tune0b_val );
-	printf( "drx_tune1a : %x\n", drx_tune1a_val );
-	printf( "drx_tune1b : %x\n", drx_tune1b_val );
-	printf( "drx_tune2  : %x\n", drx_tune2_val  );
-	printf( "drx_tune4h : %x\n", drx_tune4h_val );
-	printf( "rf_rxctrl  : %x\n", rf_rxctrl_val  );
-	printf( "rf_txctrl  : %x\n", rf_txctrl_val  );
-	printf( "tc_pgdelay : %x\n", tc_pgdelay_val );
-	printf( "fs_pllcfg  : %x\n", fs_pllcfg_val  );
-	printf( "fs_plltune : %x\n", fs_plltune_val );
+	printf( "sys_cfg    : %08" PRIx32 "\n", sys_cfg_val    );
+	printf( "tx_fctrl   : %08" PRIx32 "\n", tx_fctrl_val   );
+	printf( "chan_ctrl  : %08" PRIx32 "\n", chan_ctrl_val  );
+	printf( "agc_tune1  : %08" PRIx32 "\n", agc_tune1_val  );
+	printf( "agc_tune2  : %08" PRIx32 "\n", agc_tune2_val  );
+	printf( "agc_tune3  : %08" PRIx32 "\n", agc_tune3_val  );
+	printf( "drx_tune0b : %08" PRIx32 "\n", drx_tune0b_val );
+	printf( "drx_tune1a : %08" PRIx32 "\n", drx_tune1a_val );
+	printf( "drx_tune1b : %08" PRIx32 "\n", drx_tune1b_val );
+	printf( "drx_tune2  : %08" PRIx32 "\n", drx_tune2_val  );
+	printf( "drx_tune4h : %08" PRIx32 "\n", drx_tune4h_val );
+	printf( "rf_rxctrl  : %08" PRIx32 "\n", rf_rxctrl_val  );
+	printf( "rf_txctrl  : %08" PRIx32 "\n", rf_txctrl_val  );
+	printf( "tc_pgdelay : %08" PRIx32 "\n", tc_pgdelay_val );
+	printf( "fs_pllcfg  : %08" PRIx32 "\n", fs_pllcfg_val  );
+	printf( "fs_plltune : %08" PRIx32 "\n", fs_plltune_val );
 	printf("============================\n");
 	printf( "temperature : %f\n", temperature );
 	printf( "voltage     : %f\n", voltage     );
@@ -561,8 +689,8 @@ void dw_test(void)
 void dw_read_reg( uint32_t regAddr, uint32_t regLen, uint8_t * pData )
 {
 	// Initiate read
-	uint8_t instruction = 0x00 | (regAddr & 0x3F);
-	dw_spi_transfer_byte(instruction, DW_SPI_TRANSFER_CONT);
+	uint8_t instruction = (regAddr & 0x3F);
+	dw_spi_write_n_bytes(1, &instruction, DW_SPI_TRANSFER_CONT);
 
 	// Read data
 	dw_spi_read_n_bytes( regLen, pData, DW_SPI_TRANSFER_DONE );
@@ -613,21 +741,20 @@ uint64_t dw_read_reg_64( uint32_t regAddr, uint32_t regLen )
  */
 void dw_read_subreg( uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len, uint8_t * p_data )
 {
-	uint32_t is_three_octet = (subreg_addr > 0x7F);
+	// Check if 3-octet header is requried or if 2 will do
+	uint8_t isThreeOctet = (subreg_addr > 0x7F ? (1 << 7) : 0);
 
-	// Compose instruction
-	uint32_t instruction = 0x40 | (reg_addr & 0x3F);
-	instruction = (instruction << 8) | ((subreg_addr & 0x7F  )     ) | (is_three_octet<<7);
-	instruction = (instruction << 8) | ((subreg_addr & 0x7F80) >> 7);
+	// Prepare instruction
+	uint8_t instruction[3] = {0x00, 0x00, 0x00};
+	instruction[0] = (0x40 | (reg_addr & 0x3F)); /* write bit = 0, subreg present bit = 1 */
+	instruction[1] = isThreeOctet | (subreg_addr & 0x7F); /* isThreeOctet is the extended address bit */
 
 	// Write instruction
-	// Data is written as --001122
-	uint8_t * pInstr = (uint8_t *)(&instruction) + 2;
-	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
-	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
-	if (is_three_octet)
-	{
-		dw_spi_transfer_byte(*pInstr, DW_SPI_TRANSFER_CONT);
+    if (isThreeOctet != 0) {
+		instruction[2] = ((subreg_addr & 0x7F80) >> 7);
+		dw_spi_write_n_bytes(3, &instruction[0], DW_SPI_TRANSFER_CONT);
+	} else {
+		dw_spi_write_n_bytes(2, &instruction[0], DW_SPI_TRANSFER_CONT);
 	}
 
 	// Read data
@@ -684,9 +811,7 @@ uint64_t dw_read_subreg_64( uint32_t reg_addr, uint32_t subreg_addr, uint32_t su
 void dw_write_reg( uint32_t  reg_addr, uint32_t  reg_len, uint8_t * p_data )
 {
 	uint8_t instruction = 0x80 | (reg_addr & 0x3F);
-	dw_spi_write_byte(instruction, DW_SPI_TRANSFER_CONT);
-	     
-	dw_spi_read_byte();
+	dw_spi_write_n_bytes(0x01, &instruction, DW_SPI_TRANSFER_CONT);
 
 	dw_spi_write_n_bytes( reg_len, p_data, DW_SPI_TRANSFER_DONE);
 }
@@ -702,25 +827,26 @@ void dw_write_reg( uint32_t  reg_addr, uint32_t  reg_len, uint8_t * p_data )
  * 							 DW_SUBLEN_* defines.
  * \param[in] p_data 		A stream of bytes to write to device.
  */
-void dw_write_subreg( uint32_t  reg_addr, uint32_t  subreg_addr, uint32_t  subreg_len, uint8_t * p_data )
+void dw_write_subreg(uint32_t reg_addr, uint32_t subreg_addr, uint32_t subreg_len, uint8_t *p_data)
 {
 	// Check if 3-octet header is requried or if 2 will do
-	uint32_t isThreeOctet = (subreg_addr > 0x7F);
+	uint8_t isThreeOctet = (subreg_addr > 0x7F ? (1 << 7) : 0);
 
 	// Prepare instruction
-	uint32_t instruction = 0x0;
-	instruction = (0xC0 | (reg_addr&0x3F));
-	instruction = (instruction << 8) | (subreg_addr&0x7F       ) | (isThreeOctet<<7);
-	instruction = (instruction << 8) | (subreg_addr&0x7F80 >> 7);
+	uint8_t instruction[3] = {0x00, 0x00, 0x00};
+	instruction[0] = (0xC0 | (reg_addr & 0x3F)); /* write bit = 1, subreg present bit = 1 */
+	instruction[1] = isThreeOctet | (subreg_addr & 0x7F); /* isThreeOctet is the extended address bit */
 
 	// Write instruction
-	uint8_t * pInstr = (uint8_t *)(&instruction) + 2;
-	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
-	dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT);
-	if (isThreeOctet) { dw_spi_transfer_byte(*pInstr--, DW_SPI_TRANSFER_CONT); }
+    if (isThreeOctet != 0) {
+		instruction[2] = ((subreg_addr & 0x7F80) >> 7);
+		dw_spi_write_n_bytes(3, &instruction[0], DW_SPI_TRANSFER_CONT);
+	} else {
+		dw_spi_write_n_bytes(2, &instruction[0], DW_SPI_TRANSFER_CONT);
+	}
 
 	// Write data
-	dw_spi_write_n_bytes( subreg_len, p_data, DW_SPI_TRANSFER_DONE);
+	dw_spi_write_n_bytes(subreg_len, p_data, DW_SPI_TRANSFER_DONE);
 }
 
 /**
@@ -756,8 +882,7 @@ void dw_write_reg_multiple_data( uint32_t reg_addr, uint32_t reg_len, uint8_t  *
 
 	// Transfer data to dw1000
 	uint8_t instruction = 0x80 | (reg_addr & 0x3F);
-	dw_spi_write_byte(instruction, DW_SPI_TRANSFER_CONT);
-	dw_spi_read_byte();
+	dw_spi_write_n_bytes(0x01, &instruction, DW_SPI_TRANSFER_CONT);
 
 	int i_transaction;
 	for (i_transaction = 0; i_transaction < len_pp_data-1; ++i_transaction)
@@ -1303,7 +1428,7 @@ void dw_disable_rx_timeout()
 	cfgReg  = dw_read_reg_32( DW_REG_SYS_CFG, DW_LEN_SYS_CFG );
 	cfgReg &= ~DW_RXWTOE_MASK;
 	dw_write_reg( DW_REG_SYS_CFG, DW_LEN_SYS_CFG, (uint8_t *)&cfgReg);
-	printf("CFG: %x\n", cfgReg);
+	printf("CFG: %" PRIx32 "\n", cfgReg);
 }
 
 /**
@@ -1395,7 +1520,7 @@ void dw_clear_pending_interrupt( uint64_t mask )
 /**
  * \brief Aborts current transimission or reception and returns device to idle.
  */
-void dw_trxoff()
+void dw_trxoff(void)
 {
 	uint32_t sys_ctrl_val = dw_read_reg_32(DW_REG_SYS_CTRL, DW_LEN_SYS_CTRL);
 	sys_ctrl_val |= (1<<DW_TRXOFF) & DW_TRXOFF_MASK;
@@ -1439,42 +1564,52 @@ void dw_init_tx(void)
  */
 void dw_spi_write_byte(uint8_t byte, dw_spi_transfer_flag_t continue_transfer)
 {
-	const uint32_t chipSel = 0x1;
-	
 	//uint32_t send = SPI_PUSHR_PCS(chipSel) | SPI_PUSHR_TXDATA(byte);
 	//if (continue_transfer) { send |= SPI_PUSHR_CONT_MASK; }
 	//SPI1_PUSHR = send;
 	
-	int result = spi_transfer_blocking(   SPI_1, 
-					      DW100_CTAS,
-					      chipSel,
-					      (spi_transfer_flag_t) continue_transfer, 
-					      NULL,
-					      &byte, 0x01, 0x00);
+	int result = spi_transfer_blocking(SPI_1,
+					   DW100_CTAS,
+					   chipSel,
+					   (spi_transfer_flag_t) continue_transfer,
+					   &byte,
+					   NULL,
+                                           1, 0);
 	
 }
 
 /**
- * \brief Reads a single byte to the device. Completes only half the 
- * read/write cycle.
- * \return A single byte read from device.
+ * \brief Reads a set of n_bytes from the device.
+ * \param[in] n_bytes           Number of bytes to read.
+ * \param[in] pData             Pointer to a byte array of length n_bytes.
+ * \param[in] continue_transfer Indicates whether this transfer is part of a
+ *                               transaction or not.
  */
-uint32_t dw_spi_read_byte(void)
+void
+dw_spi_read_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_flag_t continue_transfer )
 {
-	uint32_t result;
+	if (n_bytes == 0) return;
 
- //	while (!(SPI1_SR & SPI_SR_TCF_MASK));
-//	SPI1_SR |= SPI_SR_TCF_MASK;
-//	result = SPI1_POPR;
-//	return result & 0xffff;
+	while(--n_bytes > 0)
+	{
+		spi_transfer_blocking(SPI_1,
+                                      DW100_CTAS,
+                                      chipSel,
+                                      (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT,
+                                      NULL,
+                                      pData,
+                                      0, 1);
+		++pData;
+	}
 	
-	result = spi_transfer_blocking(   SPI_1, 
-					  DW100_CTAS,
-					  chipSel,
-					  (spi_transfer_flag_t) continue_transfer, 
-					  NULL,
-					  &byte, 0x00, 0x01);
-	return result;
+	// Potentially end spi transaction
+	spi_transfer_blocking(SPI_1,
+						  DW100_CTAS,
+						  chipSel,
+						  continue_transfer,
+						  NULL,
+						  pData,
+						  0, 1);
 }
 
 /**
@@ -1486,6 +1621,7 @@ uint32_t dw_spi_read_byte(void)
  */
 void dw_spi_write_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_flag_t continue_transfer )
 {
+	int result = 0;
 	if (n_bytes == 0) return;
 
 	while( n_bytes-- > 1)
@@ -1495,9 +1631,10 @@ void dw_spi_write_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_fl
 					  DW100_CTAS,
 					  chipSel,
 					  (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT, 
-					  NULL,
-					  pData, 0x01, 0x00);
-		pData++;
+					  pData,
+                                          NULL,
+					  1, 0);
+		++pData;
 	}
 	
 	// Potentially end spi transaction
@@ -1506,102 +1643,10 @@ void dw_spi_write_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_fl
 					  DW100_CTAS,
 					  chipSel,
 					  (spi_transfer_flag_t) continue_transfer, 
+					  pData,
 					  NULL,
-					  pData, 0x01, 0x00);
+					  1, 0);
 }
 
 
-
-
-/**
- *
- * \brief Implementation of the Hardware Abstraction Layer for the mulle platform.
- *
- * \details The mulle implementation of the HAL covers:
- * 	- Interrupts.
- * 		One pin is used for interrupts. The PE5 (port E, pin 5) pin is used
- * 		for interrupts and should be connected to GPIO8 of the dw1000.
- *
- * \note The mulle implementation assumes that contiki is available and exposes
- * a specific callback, \ref dw_interrupt_callback_proc, for use in a contiki
- * application. If contiki is not available the interrupt
- *
- * \todo Generalise the interrupt callback so that the system can be used with
- * and without contiki. This could be done by introducing a contiki specific
- * HAL implementation, something akin to mulle-contiki-hal.c.
- *
- * \todo Add to documention. Version of the mulle platform and corresponding arm processor.
- */
-
-/**
- * \brief Contiki process callback for interrupt handling.
- */
-extern struct process dw_interrupt_callback_proc;
-
-/**
- * \brief Arm cortex m4 interrupt vector for port E pins.
- *
- * \todo Takes over interrupt vector completely, can you mix-in the interrupt
- * functionality?
- */
-void _isr_gpio_e(void);
-
-/**
- * \brief Internal interrupt callback.
- *
- * \note I actually don't remember why I separated the internal and external
- * interface. Might only be that I thought it was a good idea to have the
- * sparatation...
- */
-static void _dw_hal_interrupt_callback(void);
-
-//void dw_hal_init(void)
-//{
-//	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-//	PORTE_PCR5  = 0x00000100; // Function sel, alt 1, gpio
-//	PORTE_PCR5 |= 0x01000000; // Clear interrupt
-//	PORTE_PCR5 |= 0x00090000; // IRQ enable, on logic rising edge
-//	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
-//
-//	dw_hal_interrupt_handler  = _isr_gpio_e;
-//	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
-//}
-
-void dw_hal_enable_interrupt(void)
-{
-	PORTE_PCR5 |= 1<<24;
-	NVICICPR2   = 1<<27;
-	NVICISER2  |= 1<<27;
-}
-
-void dw_hal_disable_interrupt(void)
-{
-	NVICICER2 |= 1<<27;
-}
-
-void dw_hal_clear_pending_interrupt(void)
-{
-	PORTE_PCR5 |= (1<<24);
-	NVICICPR2 = 1<<27;
-}
-
-static void _dw_hal_interrupt_callback(void)
-{
-	process_poll(&dw_interrupt_callback_proc);
-}
-
-/* Interrupt handler */
-void _isr_gpio_e(void)
-{
-	dw_hal_disable_interrupt();
-
-	// Clear interrupt status
-	dw_hal_clear_pending_interrupt();
-
-	// Put handling on queue
-	dw_hal_interrupt_callback();
-
-	// Enable interrupt again!
-	dw_hal_enable_interrupt();
-}
 

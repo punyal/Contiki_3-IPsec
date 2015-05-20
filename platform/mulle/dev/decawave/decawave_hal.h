@@ -712,21 +712,13 @@ typedef struct
 
 } dw1000_base_driver;
 
-/*===========================================================================*/
-/*========================== Public Declarations ============================*/
 
-/**
- * \brief Singleton instance of the dw1000 driver. This instance mirrors the
- * configuration on the actual device. Also provides a global access point to
- * device receive buffer data.
- */
-dw1000_base_driver dw1000;
 
 /*===========================================================================*/
 /*============================ Public Functions =============================*/
 
 // Configuration
-void dw_init();
+void dw1000_init();
 void dw_conf( dw1000_base_conf_t * dw_conf  );
 void dw_conf_rx( dw1000_rx_conf_t * rx_conf );
 void dw_conf_tx( dw1000_tx_conf_t * tx_conf );
@@ -796,5 +788,42 @@ uint64_t dw_get_dx_timestamp();
 void 	 dw_set_dx_timestamp( uint64_t timestamp );
 
 void dw_clear_pending_interrupt( uint64_t mask );
+
+
+
+/**
+ * \brief Indicates whether the current transfer is part of an SPI transaction
+ * or not.
+ *
+ * \details An SPI transaction is a number of logically grouped SPI transfers.
+ * For example, a register access on the device consists of writing to the
+ * address of the register followed by reading a number of bytes. If a
+ * transaction is not used in this case the device will forget the previously
+ * committed command.
+ */
+typedef enum
+{
+	DW_SPI_TRANSFER_DONE = 0, /**< Indicates this is last transfer in transaction */
+	DW_SPI_TRANSFER_CONT = 1  /**< Indicates that there are more transfers to be done. */
+} dw_spi_transfer_flag_t;
+
+
+/* Primitive SPI functions - These are implemented in a platform-specific file e.g. mulle-spi.c */
+void     dw_spi_init(void);
+
+/* Composite SPI functions - These high level spi functions are implemented using the primitive ones. Can be found in dw_spi.c */
+void     dw_spi_read_n_bytes(   uint32_t nBytes, uint8_t * p_data, dw_spi_transfer_flag_t continue_transfer );
+void     dw_spi_write_n_bytes(  uint32_t nBytes, uint8_t * p_data, dw_spi_transfer_flag_t continue_transfer );
+
+/**
+ * \brief Generalisation for interrupt vector.
+ * \todo Should be private to platform-hal?
+ */
+extern void (* dw_hal_interrupt_handler)();
+/**
+ * \brief Host callback when interrupt detected.
+ * \todo Should be private to platform-hal?
+ */
+extern void (* dw_hal_interrupt_callback)();
 
 #endif

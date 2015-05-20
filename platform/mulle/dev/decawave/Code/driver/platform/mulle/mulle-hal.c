@@ -48,17 +48,17 @@ void _isr_gpio_e(void);
  */
 static void _dw_hal_interrupt_callback(void);
 
-void dw_hal_init(void)
-{
-	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-	PORTE_PCR5  = 0x00000100; // Function sel, alt 1, gpio
-	PORTE_PCR5 |= 0x01000000; // Clear interrupt
-	PORTE_PCR5 |= 0x00090000; // IRQ enable, on logic rising edge
-	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
-
-	dw_hal_interrupt_handler  = _isr_gpio_e;
-	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
-}
+//void dw_hal_init(void)
+//{
+//	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
+//	PORTE_PCR5  = 0x00000100; // Function sel, alt 1, gpio
+//	PORTE_PCR5 |= 0x01000000; // Clear interrupt
+//	PORTE_PCR5 |= 0x00090000; // IRQ enable, on logic rising edge
+//	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
+//
+//	dw_hal_interrupt_handler  = _isr_gpio_e;
+//	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
+//}
 
 void dw_hal_enable_interrupt(void)
 {
