@@ -113,18 +113,11 @@ void dw_hal_clear_pending_interrupt(void);
 
 void dw_hal_init(void)
 {
-	printf("\t\t\t%s %i\n",__FUNCTION__, __LINE__);
-//	SIM->SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-//	PORTE->PCR[5]  = 0x00000100; // Function sel, alt 1, gpio
-//	PORTE->PCR[5] |= 0x01000000; // Clear interrupt
-//	PORTE->PCR[5] |= 0x00090000; // IRQ enable, on logic rising edge
 	SIM->SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
 	PORTE->PCR[5]  = PORT_PCR_MUX(1); // Function sel, alt 1, gpio
 	PORTE->PCR[5] |= PORT_PCR_ISF_MASK; // Clear interrupt
 	PORTE->PCR[5] |= PORT_PCR_IRQC(9); // IRQ enable, on logic rising edge
-	//PORTE->PCR[5] |= PORT_PCR_IRQC(12); // IRQ enable, on logic logic one
 
-	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
 
 	dw_hal_interrupt_handler  = _isr_porte_pin_detect;//_isr_gpio_e;
 	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
@@ -189,22 +182,13 @@ static const spi_config_t spi1_conf[NUM_CTAR] = {
  * \brief Initialise Port configuration for the DW1000.
  */
 static void dw_port_init_spi(void) {
-
   /* Turn on port */
   BITBAND_REG(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1;
   /* Set up mux */
-  /** \todo Update SPI pin mapping to more dynamic format. (remove magic numbers) */
   PORTE->PCR[1] = PORT_PCR_MUX(2); /* SPI0_SCLK */
   PORTE->PCR[2] = PORT_PCR_MUX(2); /* SPI0_MOSI */
   PORTE->PCR[3] = PORT_PCR_MUX(2); /* SPI0_MISO */
   PORTE->PCR[4] = PORT_PCR_MUX(2); /* SPI0_PCS1 */
-
-  ////	SIM_SCGC6  |= SIM_SCGC6_SPI1_MASK; // Enable clock for spi1
-  ////	SPI1_MCR    = 0x00000001;
-  ////	SPI1_MCR    = 0x803F3000;
-  ////	SPI1_CTAR0  = 0x38002224;
-
-
 }
 
 static const uint32_t chipSel = 0x1;
