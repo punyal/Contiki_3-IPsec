@@ -231,6 +231,8 @@
 #define DW_RXDFR_MASK  (1<<13) /**< \brief dummy */
 #define DW_RXRFTO      17      /**< \brief dummy */
 #define DW_RXRFTO_MASK (1<<17) /**< \brief dummy */
+#define DW_SLP2INIT    23      /**< \brief dummy */
+#define DW_SLP2INIT_MASK (1<<23) /**< \brief dummy */
 /* DW_REG_SYS_STATUS HIGH */
 #define DW_RXPREJ      1      /**< \brief dummy */
 #define DW_RXPREJ_MASK (1<<1) /**< \brief dummy */
@@ -713,6 +715,7 @@ typedef struct
 } dw1000_base_driver;
 
 
+extern dw1000_base_driver dw1000;
 
 /*===========================================================================*/
 /*============================ Public Functions =============================*/
@@ -776,6 +779,7 @@ float dw_get_fp_power();
 void dw_get_rx_buffer(void);
 
 void dw_set_rx_timeout( uint16_t timeout );
+uint16_t dw_get_rx_timeout();
 void dw_enable_rx_timeout();
 void dw_disable_rx_timeout();
 

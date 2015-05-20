@@ -96,7 +96,7 @@ extern struct process dw_interrupt_callback_proc;
  * \todo Takes over interrupt vector completely, can you mix-in the interrupt
  * functionality?
  */
-void _isr_gpio_e(void);
+void _isr_porte_pin_detect(void);//void _isr_gpio_e(void);
 
 /**
  * \brief Internal interrupt callback.
@@ -107,34 +107,45 @@ void _isr_gpio_e(void);
  */
 static void _dw_hal_interrupt_callback(void);
 
-//void dw_hal_init(void)
-//{
-//	SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-//	PORTE_PCR5  = 0x00000100; // Function sel, alt 1, gpio
-//	PORTE_PCR5 |= 0x01000000; // Clear interrupt
-//	PORTE_PCR5 |= 0x00090000; // IRQ enable, on logic rising edge
-//	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
-//
-//	dw_hal_interrupt_handler  = _isr_gpio_e;
-//	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
-//}
+void dw_hal_enable_interrupt(void);
+void dw_hal_clear_pending_interrupt(void);
+void dw_hal_clear_pending_interrupt(void);
+
+void dw_hal_init(void)
+{
+	printf("\t\t\t%s %i\n",__FUNCTION__, __LINE__);
+//	SIM->SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
+//	PORTE->PCR[5]  = 0x00000100; // Function sel, alt 1, gpio
+//	PORTE->PCR[5] |= 0x01000000; // Clear interrupt
+//	PORTE->PCR[5] |= 0x00090000; // IRQ enable, on logic rising edge
+	SIM->SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
+	PORTE->PCR[5]  = PORT_PCR_MUX(1); // Function sel, alt 1, gpio
+	PORTE->PCR[5] |= PORT_PCR_ISF_MASK; // Clear interrupt
+	PORTE->PCR[5] |= PORT_PCR_IRQC(9); // IRQ enable, on logic rising edge
+	//PORTE->PCR[5] |= PORT_PCR_IRQC(12); // IRQ enable, on logic logic one
+
+	// uint32_t irqStatus = PORTE_PCR5 & 0x01000000; // Get interrupt status
+
+	dw_hal_interrupt_handler  = _isr_porte_pin_detect;//_isr_gpio_e;
+	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
+}
 
 void dw_hal_enable_interrupt(void)
 {
-	PORTE->PCR[5] |= 1<<24;
-	NVIC->ICPR[2]  = 1<<27;
-	NVIC->ISER[2] |= 1<<27;
+	PORTE->PCR[5] |= PORT_PCR_ISF_MASK; //PORTE->PCR[5] |= 1<<24;
+	NVIC_ClearPendingIRQ(PORTE_IRQn); // NVIC->ICPR[2]  = 1<<27;
+	NVIC_EnableIRQ(PORTE_IRQn); //	NVIC->ISER[2] |= 1<<27;
 }
 
 void dw_hal_disable_interrupt(void)
 {
-	NVIC->ICER[2] |= 1<<27;
+	NVIC_DisableIRQ(PORTE_IRQn);//	NVIC->ICER[2] |= 1<<27;
 }
 
 void dw_hal_clear_pending_interrupt(void)
 {
-	PORTE->PCR[5] |= (1<<24);
-	NVIC->ICPR[2] = 1<<27;
+	PORTE->PCR[5] |= PORT_PCR_ISF_MASK; //PORTE->PCR[5] |= (1<<24);
+	NVIC_ClearPendingIRQ(PORTE_IRQn); // NVIC->ICPR[2] = 1<<27;
 }
 
 static void _dw_hal_interrupt_callback(void)
@@ -143,7 +154,8 @@ static void _dw_hal_interrupt_callback(void)
 }
 
 /* Interrupt handler */
-void _isr_gpio_e(void)
+//void _isr_gpio_e(void)
+void _isr_porte_pin_detect(void)
 {
 	dw_hal_disable_interrupt();
 
@@ -167,7 +179,7 @@ void _isr_gpio_e(void)
  * \brief SPI configuration for the DW1000.
  */
 static const spi_config_t spi1_conf[NUM_CTAR] = {
-  { .sck_freq = 3000000, .frame_size = 7, .cpol = 0, .cpha = 0},
+  { .sck_freq = 2000000, .frame_size = 8, .cpol = 0, .cpha = 0},
   { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
   };
 
@@ -177,22 +189,22 @@ static const spi_config_t spi1_conf[NUM_CTAR] = {
  * \brief Initialise Port configuration for the DW1000.
  */
 static void dw_port_init_spi(void) {
+
   /* Turn on port */
   BITBAND_REG(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1;
   /* Set up mux */
   /** \todo Update SPI pin mapping to more dynamic format. (remove magic numbers) */
-  PORTE->PCR[0] = PORT_PCR_MUX(2); /* SPI0_PCS0 */
   PORTE->PCR[1] = PORT_PCR_MUX(2); /* SPI0_SCLK */
   PORTE->PCR[2] = PORT_PCR_MUX(2); /* SPI0_MOSI */
   PORTE->PCR[3] = PORT_PCR_MUX(2); /* SPI0_MISO */
   PORTE->PCR[4] = PORT_PCR_MUX(2); /* SPI0_PCS1 */
-  PORTE->PCR[5] = PORT_PCR_MUX(2); /* SPI0_PCS2 */
-  PORTE->PCR[6] = PORT_PCR_MUX(2); /* SPI0_PCS3 */
-}
 
-static void dw_interrupt_handler_registration(void) {
-	dw_hal_interrupt_handler  = _isr_gpio_e;
-	dw_hal_interrupt_callback = _dw_hal_interrupt_callback;
+  ////	SIM_SCGC6  |= SIM_SCGC6_SPI1_MASK; // Enable clock for spi1
+  ////	SPI1_MCR    = 0x00000001;
+  ////	SPI1_MCR    = 0x803F3000;
+  ////	SPI1_CTAR0  = 0x38002224;
+
+
 }
 
 static const uint32_t chipSel = 0x1;
@@ -202,22 +214,11 @@ static const uint32_t chipSel = 0x1;
  */
 void dw1000_init()
 {
-  
-	//SIM_SCGC5  |= SIM_SCGC5_PORTE_MASK; // Enable clock for port E
-	//PORTE_PCR1 |= 0x0200; /* mosi */
-	//PORTE_PCR2 |= 0x0200; /* clock */
-	//PORTE_PCR3 |= 0x0200; /* miso */
-	//PORTE_PCR4 |= 0x0200; /* chip sel  */
-
-	//SIM_SCGC6  |= SIM_SCGC6_SPI1_MASK; // Enable clock for spi1
-	//SPI1_MCR    = 0x00000001;
-	//SPI1_MCR    = 0x803F3000;
-	//SPI1_CTAR0  = 0x38002224;
-
 	printf( "Decawave Initialising begin\n");
-
+	// Init required hardware components
 	dw_port_init_spi();//need to check this port io initialization is correct
-	dw_interrupt_handler_registration();
+	dw_hal_init();
+
 	spi_hw_init_master(SPI_1);//turn on the spi before setting the parameters
 	spi_start(SPI_1);
 	int i;
@@ -230,9 +231,7 @@ void dw1000_init()
 
 	dw1000.state = DW_STATE_INITIALIZING;
 
-	// Init required hardware components
-	//dw_spi_init();
-	//dw_hal_init();
+
 
 	// Init dw1000
 	dw_trxoff(); /* Simple reset of device. */
@@ -253,10 +252,17 @@ void dw1000_init()
 	const uint32_t lde1  = 0x0301;
 	const uint32_t lde2  = 0x8000;
 	const uint32_t lde3  = 0x0200;
+	uint32_t value = dw_read_subreg_64(0x36, 0x00, 4);
+
+	printf("1. Value: %08" PRIx32 "\n", value);
 	dw_write_subreg(0x36, 0x00, 2, (uint8_t *)&lde1);
+	value = dw_read_subreg_64(0x36, 0x00, 4);
+	printf("2. Value: %08" PRIx32 "\n", value);
 	dw_write_subreg(0x2D, 0x06, 2, (uint8_t *)&lde2);
 	udelay(250); // Wait at least 150 us
 	dw_write_subreg(0x36, 0x00, 2, (uint8_t *)&lde3);
+	value = dw_read_subreg_64(0x36, 0x00, 4);
+	printf("3. Value: %08" PRIx32 "\n", value);
 	// // Disable LDE
 	// // TODO: Read old value and flip lderun bit
 	// //value = dw_read_subreg_64(0x36, 0x04, 4);
@@ -937,31 +943,37 @@ void dw_receive( dw1000_tranceive_t receive_type )
 {
 	// TODO: Fast receive / transmit
 
-	if (   dw1000.state == DW_STATE_RECEIVING
-		|| dw1000.state == DW_STATE_TRANSMITTING )
+	if ( (dw1000.state == DW_STATE_RECEIVING) || (dw1000.state == DW_STATE_TRANSMITTING) )
 	{
 		printf("dw1000 error: already using antenna.\n");
 		return;
 	}
 
-	//  Start reception
-	dw_init_rx();
-
-	const uint32_t wait_mask_lo = DW_RXDFR_MASK
-							| DW_RXPHE_MASK
-							| DW_RXRFTO_MASK
-							| DW_RXPTO_MASK
-							| DW_RXSFDTO_MASK
-							| DW_RXRFSL_MASK;
-	uint64_t status_reg;
-	uint64_t has_received;
 	switch ( receive_type )
 	{
 		case DW_TRANCEIVE_ASYNC:
+		{
 			dw_hal_enable_interrupt();
+			//  Start reception
+			dw_init_rx();
+			printf("Start reception\n");
 			break;
-
+		}
 		case DW_TRANCEIVE_SYNC:
+		{
+			const uint32_t wait_mask_lo = DW_RXDFR_MASK
+										| DW_RXPHE_MASK
+										| DW_RXRFTO_MASK
+										| DW_RXPTO_MASK
+										| DW_RXSFDTO_MASK
+										| DW_RXRFSL_MASK;
+			uint64_t status_reg;
+			uint64_t has_received;
+
+			//  Start reception
+			dw_init_rx();
+			printf("Start reception\n");
+
 			do
 			{
 				// Wait until data received
@@ -973,6 +985,7 @@ void dw_receive( dw1000_tranceive_t receive_type )
 
 			dw_get_rx_buffer();
 			break;
+		}
 	}
 	return;
 }
@@ -1286,14 +1299,14 @@ float dw_get_rx_power()
 	uint32_t rx_finfo_val = dw_read_reg_32(DW_REG_RX_FINFO, DW_LEN_RX_FINFO);
 	float c = (rx_fqual_val & (DW_CIR_PWR_MASK)) >> DW_CIR_PWR;
 	float n = (rx_finfo_val & (DW_RXPACC_MASK)) >> DW_RXPACC;
-	float a;
+//	float a;
 	float rx_power;
 
-	switch (dw1000.conf.prf)
-	{
-		case DW_PRF_16_MHZ: a = 115.72; break;
-		case DW_PRF_64_MHZ: a = 121.74; break;
-	}
+//	switch (dw1000.conf.prf)
+//	{
+//		case DW_PRF_16_MHZ: a = 115.72; break;
+//		case DW_PRF_64_MHZ: a = 121.74; break;
+//	}
 
 	// If you have access to logarithm...
 	//rx_power = 10.f * log10( (float)(c * powf(2,17)) / (float)(n*n) ) - a;
@@ -1320,14 +1333,14 @@ float dw_get_fp_power()
 	float fp_ampl2 = (float)((rx_fqual_val & (DW_FP_AMPL2_MASK)) >> DW_FP_AMPL2);
 	float fp_ampl3 = (float)((rx_fqual_val & (DW_FP_AMPL3_MASK)) >> DW_FP_AMPL3);
 	float n = (float)((rx_finfo_val & (DW_RXPACC_MASK)) >> DW_RXPACC);
-	float a;
+//	float a;
 	float fp_power;
 
-	switch (dw1000.conf.prf)
-	{
-		case DW_PRF_16_MHZ: a = 115.72; break;
-		case DW_PRF_64_MHZ: a = 121.74; break;
-	}
+//	switch (dw1000.conf.prf)
+//	{
+//		case DW_PRF_16_MHZ: a = 115.72; break;
+//		case DW_PRF_64_MHZ: a = 121.74; break;
+//	}
 
 	float fp_ampl1_2 = (float) (fp_ampl1 * fp_ampl1);
 	float fp_ampl2_2 = (float) (fp_ampl2 * fp_ampl2);
@@ -1573,14 +1586,13 @@ void dw_spi_write_byte(uint8_t byte, dw_spi_transfer_flag_t continue_transfer)
 	//if (continue_transfer) { send |= SPI_PUSHR_CONT_MASK; }
 	//SPI1_PUSHR = send;
 	
-	int result = spi_transfer_blocking(SPI_1,
-					   DW100_CTAS,
-					   chipSel,
-					   (spi_transfer_flag_t) continue_transfer,
-					   &byte,
-					   NULL,
-                                           1, 0);
-	
+	spi_transfer_blocking(	SPI_1,
+						   DW100_CTAS,
+						   chipSel,
+						   (spi_transfer_flag_t) continue_transfer,
+						   &byte,
+						   NULL,
+						   1, 0);
 }
 
 /**
@@ -1598,12 +1610,12 @@ dw_spi_read_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_flag_t c
 	while(--n_bytes > 0)
 	{
 		spi_transfer_blocking(SPI_1,
-                                      DW100_CTAS,
-                                      chipSel,
-                                      (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT,
-                                      NULL,
-                                      pData,
-                                      0, 1);
+							  DW100_CTAS,
+							  chipSel,
+							  (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT,
+							  NULL,
+							  pData,
+							  0, 1);
 		++pData;
 	}
 	
@@ -1626,19 +1638,18 @@ dw_spi_read_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_flag_t c
  */
 void dw_spi_write_n_bytes( uint32_t n_bytes, uint8_t * pData, dw_spi_transfer_flag_t continue_transfer )
 {
-	int result = 0;
 	if (n_bytes == 0) return;
 
 	while( n_bytes-- > 1)
 	{
 		//dw_spi_transfer_byte(*pData, DW_SPI_TRANSFER_CONT);
-		result = spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT, pData, NULL, 1, 0);
+		spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) DW_SPI_TRANSFER_CONT, pData, NULL, 1, 0);
 		++pData;
 	}
 	
 	// Potentially end spi transaction
 	//dw_spi_transfer_byte(*pData, continue_transfer);
-	result = spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) continue_transfer, pData, NULL, 1, 0);
+	spi_transfer_blocking( SPI_1, DW100_CTAS, chipSel, (spi_transfer_flag_t) continue_transfer, pData, NULL, 1, 0);
 }
 
 
