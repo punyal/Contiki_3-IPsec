@@ -353,7 +353,7 @@
  * are ignored by the device, thus to get the correct manual timestamping
  * behaviour this needs to be accounted for.
  */
-#define DX_TIMESTAMP_CLEAR_LOW_9 (0xFFFFFFFFFFFFFFE00ULL)
+#define DX_TIMESTAMP_CLEAR_LOW_9 (0xFFFFFFFFFFFFFE00ULL)
 
 /**
   * \def DW_ERROR(...)
