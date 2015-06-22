@@ -50,7 +50,7 @@
 #include "net/ip/uip-debug.h"
 
 #ifndef SLIP_BRIDGE_BAUD
-#define SLIP_BRIDGE_BAUD 921600
+#define SLIP_BRIDGE_BAUD 115200
 #endif
 
 void set_prefix_64(uip_ipaddr_t *);
