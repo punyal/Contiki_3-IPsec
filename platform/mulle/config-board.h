@@ -100,7 +100,7 @@ extern "C" {
 /**
  * Baud rate of debug UART.
  */
-#define BOARD_DEBUG_UART_BAUD 921600
+#define BOARD_DEBUG_UART_BAUD 115200
 
 /**
  * PORT module containing the TX pin of the debug UART.
