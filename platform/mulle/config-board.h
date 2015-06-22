@@ -100,7 +100,7 @@ extern "C" {
 /**
  * Baud rate of debug UART.
  */
-#define BOARD_DEBUG_UART_BAUD 921600
+#define BOARD_DEBUG_UART_BAUD 115200
 
 /**
  * PORT module containing the TX pin of the debug UART.
@@ -206,8 +206,12 @@ extern "C" {
 /**
  * RTC crystal load capacitance configuration bits.
  */
-/* enable 12pF load capacitance, might need adjusting.. */
-#define BOARD_RTC_LOAD_CAP_BITS (RTC_CR_SC8P_MASK | RTC_CR_SC4P_MASK)
+/* The crystal on the Mulle is designed for 12.5 pF load capacitance. According
+ * to the data sheet, the K60 will have a 5 pF parasitic capacitance on the
+ * XTAL32/EXTAL32 connection. The board traces might give some minor parasitic
+ * capacitance as well. */
+/* enable 6pF load capacitance, might need adjusting.. */
+#define BOARD_RTC_LOAD_CAP_BITS (RTC_CR_SC4P_MASK | RTC_CR_SC2P_MASK)
 
 /**
  * PIT channel to use for clock_delay_usec and clock_delay_msec.
