@@ -74,7 +74,7 @@ endif
 
 ifeq ($(CONTIKI_WITH_RIME),1)
   HAS_STACK = 1
-  CFLAGS += -DNETSTACK_CONF_WITH_RIME=1 
+  CFLAGS += -DNETSTACK_CONF_WITH_RIME=1
   MODULES += core/net/rime
 endif
 
@@ -90,7 +90,13 @@ ifeq ($(CONTIKI_WITH_IPV6),1)
   ifneq ($(CONTIKI_WITH_RPL),0)
   	CONTIKI_WITH_RPL = 1
   endif
-  MODULES += core/net/ipv6 core/net/ip
+  MODULES += core/net/ipv6 core/net/ip core/net/ipv6/ipsec core/net/ipv6/ipsec/ike core/net/ipv6/ipsec/transforms core/lib/contikiecc core/lib/hmac-sha1
+
+  CONTIKI_ECC_DIR = $(CONTIKI)/core/lib/contikiecc
+  CONTIKI_SHA_DIR = $(CONTIKI)/core/lib/hmac-sha1
+
+  include $(CONTIKI_ECC_DIR)/Makefile.contikiecc
+  include $(CONTIKI_SHA_DIR)/Makefile.hmac-sha1
 endif
 
 ifeq ($(CONTIKI_WITH_RPL),1)

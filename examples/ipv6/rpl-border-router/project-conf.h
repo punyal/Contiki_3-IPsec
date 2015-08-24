@@ -41,9 +41,11 @@
 #define UIP_FALLBACK_INTERFACE rpl_interface
 #endif
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          4
-#endif
+#define RPL_CONF_INSERT_HBH_OPTION 0
+
+//#ifndef QUEUEBUF_CONF_NUM
+//#define QUEUEBUF_CONF_NUM          4
+//#endif
 
 #ifndef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE    2048
